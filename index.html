@@ -633,11 +633,21 @@
                 const modal = reactive({ show: false, type: '', title: '', data: null, isEditing: false });
                 const form = reactive({ char: {}, letter: {}, timeline: '', event: { category: '', date: '', title: '', desc: '', fullDesc: '', imgUrl: '' }, presetName: '' });
 
+                const getLetters = () => { const charId = currentCharacter.value.id; if (!letters.value[charId]) letters.value[charId] = { sentiments: [], echoes: [] }; return letters.value[charId][currentTab.value] || []; };
+
                 const openModal = (type, data = null) => {
                     modal.type = type; modal.show = true; modal.isEditing = false;
                     if (type === 'addCharacter') { modal.title = '建立新缘分'; form.char = { name: '', nickname: '', tags: '', startDate: '', avatar: '', motto: '', bgmUrl: '' }; }
                     else if (type === 'editCharacter') { modal.title = '修缮印记'; form.char = { ...currentCharacter.value }; if (Array.isArray(form.char.tags)) form.char.tags = form.char.tags.join(','); }
-                    else if (type === 'addLetter') { modal.title = '落笔成书'; form.letter = { title: '', date: new Date().toISOString().split('T')[0], content: '' }; }
+                    else if (type === 'addLetter') { 
+                        modal.title = '落笔成书'; 
+                        const existing = getLetters()[0];
+                        if (existing) {
+                            form.letter = { ...existing }; 
+                        } else {
+                            form.letter = { title: '', date: new Date().toISOString().split('T')[0], content: '' }; 
+                        }
+                    }
                     else if (type === 'editLetter') { modal.title = '重写锦书'; form.letter = { ...data }; }
                     else if (type === 'editTimeline') { modal.title = '整体编撰岁序'; form.timeline = currentCharacter.value.timelineRaw || ''; }
                     else if (type === 'addTimelineEvent') { modal.title = '添笔新纪'; form.event = { category: '', date: '', title: '', desc: '', fullDesc: '', imgUrl: '' }; }
@@ -646,10 +656,17 @@
 
                 const saveCharacter = () => { const charData = { ...form.char, id: form.char.id || Date.now(), tags: typeof form.char.tags === 'string' ? form.char.tags.split(/[,，]/).map(t => t.trim()) : form.char.tags }; if (modal.type === 'addCharacter') { characters.value.push(charData); } else { const idx = characters.value.findIndex(c => c.id === charData.id); characters.value[idx] = charData; currentCharacter.value = charData; } modal.show = false; };
                 const confirmDeleteCharacter = (id) => { if (confirm('抹除后记忆不可追。确定吗？')) { characters.value = characters.value.filter(c => c.id !== id); delete letters.value[id]; localStorage.setItem('lyhx_chars', JSON.stringify(characters.value)); localStorage.setItem('lyhx_letters', JSON.stringify(letters.value)); goHome(); } };
-                const getLetters = () => { const charId = currentCharacter.value.id; if (!letters.value[charId]) letters.value[charId] = { sentiments: [], echoes: [] }; return letters.value[charId][currentTab.value] || []; };
                 const getCurrentLetter = () => getLetters()[currentLetterIdx.value] || {};
                 const editCurrentLetter = () => { openModal('editLetter', getCurrentLetter()); };
-                const saveLetter = () => { const charId = currentCharacter.value.id; if (!letters.value[charId]) letters.value[charId] = { sentiments: [], echoes: [] }; const list = letters.value[charId][currentTab.value]; if (modal.type === 'addLetter') { list.unshift({ ...form.letter }); } else { list[currentLetterIdx.value] = { ...form.letter }; } modal.show = false; };
+                
+                const saveLetter = () => { 
+                    const charId = currentCharacter.value.id; 
+                    if (!letters.value[charId]) letters.value[charId] = { sentiments: [], echoes: [] }; 
+                    const list = letters.value[charId][currentTab.value]; 
+                    // 有且仅能有一封信，始终覆盖第一项
+                    list[0] = { ...form.letter };
+                    modal.show = false; 
+                };
                 
                 const saveTimeline = () => { currentCharacter.value.timelineRaw = form.timeline; modal.show = false; };
 
@@ -780,6 +797,3 @@
     </script>
 </body>
 </html>
-
-
-
