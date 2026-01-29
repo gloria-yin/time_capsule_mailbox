@@ -81,6 +81,23 @@
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
 
+        /* 展信动画 */
+        .letter-animate-enter-active {
+            animation: letter-reveal 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes letter-reveal {
+            0% {
+                transform: translateY(30px) scale(0.96);
+                opacity: 0;
+                filter: blur(8px);
+            }
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+                filter: blur(0);
+            }
+        }
+
         @keyframes rotate {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -252,13 +269,14 @@
                             class="text-[#4a3728] transition-all btn-active w-8 h-8 flex items-center justify-center">
                         <i :class="isMusicPlaying ? 'fa-solid fa-circle-pause rotating' : 'fa-solid fa-circle-play'" class="text-xl opacity-60"></i>
                     </button>
-                    <button v-if="currentPage !== 'workshop'" @click="enterWorkshop" class="text-[#4a3728] opacity-50 hover:opacity-100 transition p-2">
+                    <!-- 修改：仅在主页显示设置按钮 -->
+                    <button v-if="currentPage === 'home'" @click="enterWorkshop" class="text-[#4a3728] opacity-50 hover:opacity-100 transition p-2">
                         <i class="fa-solid fa-paintbrush"></i>
                     </button>
                 </div>
             </header>
 
-            <transition name="fade" mode="out-in">
+            <transition :name="currentPage === 'detail' ? 'letter-animate' : 'fade'" mode="out-in">
                 <!-- 1. 缘起之遇 -->
                 <div v-if="currentPage === 'home'" key="home" class="p-6">
                     <div class="flex justify-between items-center mb-10">
@@ -403,10 +421,8 @@
                                             <div class="flex-1 min-w-0">
                                                 <div class="mb-1">
                                                     <span class="text-[9px] font-bold text-[#4a3728] opacity-40 block uppercase tracking-tighter">{{ item.date }}</span>
-                                                    <!-- 禁止省略标题 -->
                                                     <h4 class="text-[12px] font-bold tracking-tight text-[#4a3728] group-hover:text-black">{{ item.event }}</h4>
                                                 </div>
-                                                <!-- 禁止省略文字内容 -->
                                                 <p class="text-[11px] opacity-60 leading-relaxed italic">{{ item.desc }}</p>
                                                 
                                                 <div v-if="item.fullDesc" class="mt-2 opacity-30">
@@ -414,8 +430,12 @@
                                                 </div>
                                             </div>
 
-                                            <div v-if="item.imgUrl" class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-black/5 shadow-inner">
-                                                <img :src="item.imgUrl" class="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700">
+                                            <div v-if="item.imgUrl" class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-black/5 shadow-inner bg-black/5">
+                                                <img :src="item.imgUrl" 
+                                                     referrerpolicy="no-referrer"
+                                                     loading="lazy"
+                                                     class="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700"
+                                                     @error="handleImgError">
                                             </div>
                                         </div>
                                     </div>
@@ -432,11 +452,10 @@
                     </div>
                     
                     <div class="space-y-6">
-                        <!-- 预设部分保持不变 -->
                         <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
                             <div class="flex justify-between items-center mb-4"><h4 class="font-bold text-xs flex items-center gap-2"><i class="fa-solid fa-bookmark"></i> 预设方案</h4><button @click="openModal('savePreset')" class="text-[9px] bg-[#4a3728] text-white px-2 py-1 rounded">保存预设</button></div>
                             <div v-if="tempSettings.stationeryPresets.length === 0" class="text-center py-4 opacity-30 text-[10px]">暂无预设</div>
-                            <div class="flex gap-3 overflow-x-auto pb-4 hide-scrollbar">
+                            <div class="flex gap-4 overflow-x-auto pb-6 hide-scrollbar pt-2">
                                 <div v-for="(preset, pIdx) in tempSettings.stationeryPresets" :key="pIdx" class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative group transition-all">
                                     <div @click="loadPreset(preset)" class="w-full h-10 rounded bg-cover mb-2 cursor-pointer" :style="{backgroundImage: `url(${preset.config.bg})`}"></div>
                                     <p class="text-[9px] font-bold truncate mb-2 text-center">{{ preset.name }}</p>
@@ -444,12 +463,11 @@
                                         <button @click="applyToTab(preset, 'sentiments')" class="flex-1 text-[7px] py-1 bg-[#4a3728] text-white rounded">写信</button>
                                         <button @click="applyToTab(preset, 'echoes')" class="flex-1 text-[7px] py-1 bg-red-800 text-white rounded">收信</button>
                                     </div>
-                                    <button @click.stop="removePreset(pIdx)" class="absolute -top-1 -right-1 w-4 h-4 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-[8px]"><i class="fa-solid fa-trash-can scale-75"></i></button>
+                                    <button @click.stop="removePreset(pIdx)" class="absolute -top-2 -right-2 w-5 h-5 bg-black/80 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-lg text-[10px] z-10"><i class="fa-solid fa-xmark scale-75"></i></button>
                                 </div>
                             </div>
                         </section>
 
-                        <!-- 修改：参数调节支持折叠，且包含预览 -->
                         <section class="bg-white/50 rounded-2xl border border-black/5 overflow-hidden">
                             <h4 @click="workshopUi.showParams = !workshopUi.showParams" 
                                 class="font-bold text-xs p-5 flex items-center justify-between cursor-pointer hover:bg-black/5 transition-colors">
@@ -487,13 +505,24 @@
                             </div>
                         </section>
 
-                        <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
-                            <h4 class="font-bold text-xs mb-4 flex items-center gap-2"><i class="fa-solid fa-font"></i> 字体库</h4>
-                            <div class="space-y-4">
+                        <section class="bg-white/50 rounded-2xl border border-black/5 overflow-hidden">
+                            <h4 @click="workshopUi.showFonts = !workshopUi.showFonts" 
+                                class="font-bold text-xs p-5 flex items-center justify-between cursor-pointer hover:bg-black/5 transition-colors">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-font"></i> 字体库</span>
+                                <i :class="workshopUi.showFonts ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="opacity-40 text-[10px]"></i>
+                            </h4>
+                            
+                            <div v-if="workshopUi.showFonts" class="p-5 pt-0 space-y-4">
                                 <div class="flex gap-2"><input v-model="fontInput.name" placeholder="字体名" class="vintage-input flex-1 text-[10px]"><input v-model="fontInput.url" placeholder="URL" class="vintage-input flex-[2] text-[10px]"><button @click="addCustomFont" class="bg-[#4a3728] text-white px-2 py-1 rounded text-[10px]">添加</button></div>
-                                <div class="space-y-2 max-h-32 overflow-y-auto pr-2 hide-scrollbar"><div v-for="(cf, idx) in tempSettings.customFonts" :key="idx" class="flex justify-between items-center text-[9px] bg-black/5 p-2 rounded"><span class="font-bold">{{ cf.name }}</span><button @click="removeCustomFont(idx)" class="text-red-800 opacity-40"><i class="fa-solid fa-trash"></i></button></div></div>
+                                <div class="space-y-2 max-h-32 overflow-y-auto pr-2 hide-scrollbar">
+                                    <div v-for="(cf, idx) in tempSettings.customFonts" :key="idx" class="flex justify-between items-center text-[9px] bg-black/5 p-2 rounded">
+                                        <span class="font-bold">{{ cf.name }}</span>
+                                        <button @click="removeCustomFont(idx)" class="text-red-800 opacity-40"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </div>
                             </div>
                         </section>
+
                         <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
                             <h4 class="font-bold text-xs mb-4 flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles"></i> 界面修饰</h4>
                             <div class="space-y-4">
@@ -510,11 +539,17 @@
                 </div>
             </transition>
 
-            <!-- 弹窗：修正位置为全平台居中 -->
+            <!-- 弹窗 -->
             <transition name="fade">
                 <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
                     <div class="bg-[#fefaf0] w-full max-w-md rounded-3xl p-6 paper-texture max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-base tracking-widest">{{ modal.title }}</h3><button @click="modal.show = false" class="opacity-30 p-2"><i class="fa-solid fa-xmark"></i></button></div>
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-base tracking-widest">{{ modal.title }}</h3>
+                            <!-- 修改：纪年修笔时隐藏叉叉 -->
+                            <button v-if="!(modal.type === 'viewTimelineDetail' && modal.isEditing)" @click="modal.show = false" class="opacity-30 p-2">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
 
                         <!-- 角色编辑 -->
                         <div v-if="modal.type === 'addCharacter' || modal.type === 'editCharacter'" class="space-y-4">
@@ -553,8 +588,8 @@
                                     </div>
                                     <button @click="modal.isEditing = true" class="text-[10px] border border-[#4a3728] px-3 py-1 rounded-full opacity-60 hover:opacity-100 flex-shrink-0">修笔</button>
                                 </div>
-                                <div v-if="modal.data.imgUrl" class="mb-5 rounded-2xl overflow-hidden shadow-lg border-4 border-white">
-                                    <img :src="modal.data.imgUrl" class="w-full h-auto max-h-72 object-cover">
+                                <div v-if="modal.data.imgUrl" class="mb-5 rounded-2xl overflow-hidden shadow-lg border-4 border-white bg-black/5">
+                                    <img :src="modal.data.imgUrl" referrerpolicy="no-referrer" class="w-full h-auto max-h-72 object-cover" @error="handleImgError">
                                 </div>
                                 <div class="letter-content leading-relaxed text-[13px] opacity-80 whitespace-pre-wrap font-serif-sc">
                                     {{ modal.data.fullDesc || modal.data.desc }}
@@ -614,7 +649,8 @@
 
                 // 工坊 UI 状态
                 const workshopUi = reactive({
-                    showParams: false
+                    showParams: false,
+                    showFonts: false
                 });
 
                 const defaultStationery = { bg: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?q=80&w=1000&auto=format&fit=crop', pTop: 40, pBottom: 40, pLeft: 30, pRight: 30, fontSize: 18, textColor: '#4a3728', fontFamily: "'Zhi Mang Xing', cursive" };
@@ -633,7 +669,6 @@
                 const removeCustomFont = (idx) => { tempSettings.customFonts.splice(idx, 1); applyCustomFontsToPage(tempSettings.customFonts); };
                 const saveSettings = () => { Object.assign(settings, JSON.parse(JSON.stringify(tempSettings))); localStorage.setItem('lyhx_settings', JSON.stringify(settings)); applyCustomFontsToPage(settings.customFonts); alert('配置已封存应用'); goHome(); };
                 
-                // 修改：支持相同名字覆盖内容
                 const confirmSavePreset = () => { 
                     if(!form.presetName) return; 
                     const existingIdx = tempSettings.stationeryPresets.findIndex(p => p.name === form.presetName);
@@ -655,7 +690,21 @@
                 const removePreset = (idx) => { tempSettings.stationeryPresets.splice(idx, 1); };
                 const goHome = () => { currentPage.value = 'home'; if(bgmPlayer.value) { bgmPlayer.value.pause(); bgmPlayer.value.currentTime = 0; } isMusicPlaying.value = false; };
                 const calculateDays = (dateStr) => { if (!dateStr) return 0; try { const d = new Date(dateStr.replace(/[年|月]/g, '-').replace('日', '')); if (isNaN(d.getTime())) return 0; return Math.max(0, Math.floor((new Date() - d) / 86400000)); } catch(e) { return 0; } };
-                const selectCharacter = (char) => { currentCharacter.value = char; currentPage.value = 'detail'; currentTab.value = 'imprint'; currentLetterIdx.value = 0; isMusicPlaying.value = false; if(bgmPlayer.value) { bgmPlayer.value.pause(); bgmPlayer.value.currentTime = 0; } };
+                
+                // 修改：进入角色页面时自动回到顶部
+                const selectCharacter = (char) => { 
+                    currentCharacter.value = char; 
+                    currentPage.value = 'detail'; 
+                    currentTab.value = 'imprint'; 
+                    currentLetterIdx.value = 0; 
+                    isMusicPlaying.value = false; 
+                    if(bgmPlayer.value) { 
+                        bgmPlayer.value.pause(); 
+                        bgmPlayer.value.currentTime = 0; 
+                    }
+                    // 核心修改点：界面归位顶部
+                    window.scrollTo(0, 0);
+                };
 
                 const modal = reactive({ show: false, type: '', title: '', data: null, isEditing: false });
                 const form = reactive({ char: {}, letter: {}, timeline: '', event: { category: '', date: '', title: '', desc: '', fullDesc: '', imgUrl: '' }, presetName: '' });
@@ -763,7 +812,7 @@
                         if (line.startsWith('#')) {
                             currentCategory = line.replace('#', '').trim();
                             result.push({ type: 'stage', content: currentCategory });
-                        } else if (line.startsWith('详细描述：[')) {
+                        } else if (line.startsWith('详细描述：[') || line.startsWith('详细描述:[')) {
                             let content = "";
                             i++; 
                             while (i < lines.length && !lines[i].trim().endsWith(']')) {
@@ -771,8 +820,8 @@
                                 i++;
                             }
                             if (currentEvent) currentEvent.fullDesc = content.trim();
-                        } else if (line.startsWith('图片：')) {
-                            if (currentEvent) currentEvent.imgUrl = line.replace('图片：', '').trim();
+                        } else if (line.match(/^图片[：:]/)) {
+                            if (currentEvent) currentEvent.imgUrl = line.replace(/^图片[：:]/, '').trim();
                         } else if (line.includes('-')) {
                             const [d, e, s] = line.split('-');
                             currentEvent = { type: 'event', date: d, event: e || "无题", desc: s || "", category: currentCategory, fullDesc: '', imgUrl: '' };
@@ -781,6 +830,13 @@
                     }
                     return result;
                 });
+
+                const handleImgError = (e) => {
+                    if (e.target.src !== defaultAvatar) {
+                        e.target.src = defaultAvatar;
+                        e.target.classList.add('opacity-50');
+                    }
+                };
 
                 const toggleMusic = () => { if (!bgmPlayer.value) return; if (isMusicPlaying.value) { bgmPlayer.value.pause(); } else { bgmPlayer.value.play().catch(() => { isMusicPlaying.value = false; }); } isMusicPlaying.value = !isMusicPlaying.value; };
                 const exportLetterImage = () => { const area = document.getElementById('letter-canvas'); html2canvas(area, { useCORS: true, scale: 2 }).then(canvas => { const link = document.createElement('a'); link.download = `流年书信-${getCurrentLetter().title}.png`; link.href = canvas.toDataURL(); link.click(); }); };
@@ -803,12 +859,12 @@
 
                 return {
                     currentPage, currentTab, characters, currentCharacter, settings, tempSettings, fontInput, themeOptions,
-                    tabNameMap, modal, form, isMusicPlaying, bgmPlayer, isLocked, pinInput, currentLetterIdx, defaultAvatar, workshopUi,
+                    tabNameMap, modal, form, currentLetterIdx, defaultAvatar, workshopUi,
                     goHome, calculateDays, selectCharacter, openModal, saveCharacter, confirmDeleteCharacter, enterWorkshop, saveSettings,
                     addCustomFont, removeCustomFont, confirmSavePreset, loadPreset, applyToTab, removePreset,
                     getLetters, getCurrentLetter, saveLetter, editCurrentLetter, saveTimeline, saveSingleEvent, viewTimelineDetail, saveSingleEventFromView,
                     toggleMusic, exportLetterImage, exportData, importData, clearAllData, handlePinInput, checkPin,
-                    parsedTimeline, getLetterStyle, getPaddingStyle, getLetterPreviewStyle, getPaddingPreviewStyle, getLetterFontPreviewStyle, getActiveLetterConfig, RingThemeClass
+                    parsedTimeline, getLetterStyle, getPaddingStyle, getLetterPreviewStyle, getPaddingPreviewStyle, getLetterFontPreviewStyle, getActiveLetterConfig, RingThemeClass, handleImgError, isMusicPlaying, bgmPlayer, isLocked, pinInput
                 };
             }
         }).mount('#app');
