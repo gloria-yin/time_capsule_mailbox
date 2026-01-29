@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>流年函匣 - Time-Capsule Mailbox</title>
+    
+    <!-- PWA Manifest & Meta -->
+    <meta name="theme-color" content="#f4ead5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="https://static.eeo.cn/upload/file/20260129/1769665951876415.jpg">
+    
+    <link rel="manifest" id="manifest-link">
+    <script>
+        const manifest = {
+            "name": "流年函匣",
+            "short_name": "函匣",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#f4ead5",
+            "theme_color": "#f4ead5",
+            "icons": [
+                {
+                    "src": "https://static.eeo.cn/upload/file/20260129/1769665951876415.jpg",
+                    "sizes": "192x192",
+                    "type": "image/jpeg"
+                },
+                {
+                    "src": "https://static.eeo.cn/upload/file/20260129/1769665951876415.jpg",
+                    "sizes": "512x512",
+                    "type": "image/jpeg"
+                }
+            ]
+        };
+        const stringManifest = JSON.stringify(manifest);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        document.getElementById('manifest-link').setAttribute('href', URL.createObjectURL(blob));
+    </script>
+
+    <!-- 引入资源 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Zhi+Mang+Xing&family=Ma+Shan+Zheng&family=Long+Cang&display=swap" rel="stylesheet">
+    
+    <style id="custom-fonts-style"></style>
+    <style>
+        :root {
+            --paper-bg: #f4ead5;
+            --sepia-dark: #4a3728;
+        }
+
+        body {
+            background-color: var(--paper-bg);
+            color: var(--sepia-dark);
+            overflow-x: hidden;
+            background-image: url("https://www.transparenttextures.com/patterns/old-map.png");
+            transition: background-color 0.5s ease;
+        }
+
+        .font-serif-sc { font-family: 'Noto Serif SC', serif; }
+        .font-cursive { font-family: 'Zhi Mang+Xing', cursive; }
+
+        .paper-texture {
+            background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.05) 100%);
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.1), inset 0 0 50px rgba(0,0,0,0.02);
+            position: relative;
+        }
+
+        .paper-texture::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://www.transparenttextures.com/patterns/handmade-paper.png');
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .rotating { animation: rotate 8s linear infinite; }
+
+        .btn-active:active { transform: scale(0.92); transition: 0.1s; }
+
+        .vintage-input {
+            background: rgba(255,255,255,0.4);
+            border: none;
+            border-bottom: 1px solid var(--sepia-dark);
+            padding: 8px 4px;
+            outline: none;
+        }
+
+        .letter-display {
+            width: 100%;
+            min-height: 520px;
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .letter-content p {
+            margin-bottom: 0.5em;
+        }
+
+        .preview-container {
+            width: 100%;
+            height: 380px; 
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+            background: rgba(0,0,0,0.02);
+            border-radius: 12px;
+        }
+
+        .preview-mini {
+            transform: scale(0.65);
+            transform-origin: top center;
+            flex-shrink: 0;
+            margin-top: 10px;
+        }
+
+        .vintage-seal {
+            border: 2px solid #8b0000;
+            color: #8b0000;
+            padding: 2px 6px;
+            font-family: 'Ma Shan Zheng', cursive;
+            transform: rotate(-15deg);
+            display: inline-block;
+            opacity: 0.7;
+            font-size: 14px;
+            border-radius: 4px;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .timeline-line {
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: var(--sepia-dark);
+            opacity: 0.2;
+        }
+
+        /* 重新设计的主页卡片样式 */
+        .character-card {
+            position: relative;
+            background: rgba(255, 255, 255, 0.4);
+            padding: 1.25rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+        
+        .character-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: url('https://www.transparenttextures.com/patterns/handmade-paper.png');
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .character-card:nth-child(odd) { transform: rotate(-1deg); }
+        .character-card:nth-child(even) { transform: rotate(1.2deg); }
+
+        .character-card:hover {
+            transform: rotate(0deg) translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        .polaroid-frame {
+            background: white;
+            padding: 4px 4px 16px 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: rotate(-2deg);
+            transition: transform 0.3s;
+        }
+
+        .character-card:hover .polaroid-frame {
+            transform: rotate(0deg);
+        }
+
+        .postal-days-stamp {
+            position: absolute;
+            top: -10px;
+            right: -5px;
+            width: 56px;
+            height: 56px;
+            border: 2px dashed rgba(139, 0, 0, 0.2);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.6);
+            transform: rotate(15deg);
+            z-index: 10;
+        }
+
+        .postal-days-stamp span:first-child { font-size: 8px; font-weight: bold; color: #8b0000; opacity: 0.6; }
+        .postal-days-stamp span:nth-child(2) { font-size: 14px; font-weight: 900; color: #8b0000; line-height: 1; }
+        .postal-days-stamp span:last-child { font-size: 7px; color: #8b0000; opacity: 0.5; }
+    </style>
+</head>
+<body class="min-h-screen" :style="{ backgroundColor: settings.theme.bgColor, fontFamily: settings.theme.globalFont }">
+    <div id="app" v-cloak>
+        <!-- 隐私锁屏 -->
+        <transition name="fade">
+            <div v-if="isLocked" class="fixed inset-0 z-[100] bg-[#f4ead5] flex flex-col items-center justify-center p-8 text-center paper-texture">
+                <h2 class="text-3xl font-bold mb-8 tracking-widest">流年函匣</h2>
+                <div class="flex gap-4 mb-8">
+                    <input v-for="n in 4" :key="n" type="password" maxlength="1" 
+                           class="w-12 h-16 text-center text-2xl border-b-2 border-[#4a3728] bg-transparent outline-none"
+                           v-model="pinInput[n-1]" @input="handlePinInput(n-1, $event)">
+                </div>
+                <button @click="checkPin" class="px-10 py-3 border border-[#4a3728] rounded-full btn-active uppercase text-xs tracking-widest">解封</button>
+            </div>
+        </transition>
+
+        <!-- 主内容区 -->
+        <main class="max-w-md mx-auto min-h-screen pb-12 relative shadow-2xl transition-all" 
+              :style="{ backgroundColor: settings.theme.bgColor + 'CC', fontFamily: settings.theme.globalFont }">
+            
+            <header class="p-5 flex justify-between items-center border-b border-black/5 bg-white/20 backdrop-blur-sm sticky top-0 z-40">
+                <div @click="goHome" class="cursor-pointer flex items-center gap-3 group">
+                    <i v-if="currentPage !== 'home'" class="fa-solid fa-chevron-left text-sm opacity-40 group-hover:opacity-100 transition"></i>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-widest text-[#4a3728]">流年函匣</h1>
+                        <p class="text-[8px] uppercase tracking-tighter opacity-30">Time-Capsule Mailbox</p>
+                    </div>
+                </div>
+                <div class="flex gap-4 items-center">
+                    <button v-if="currentPage === 'detail' && currentCharacter.bgmUrl" 
+                            @click="toggleMusic"
+                            class="text-[#4a3728] transition-all btn-active w-8 h-8 flex items-center justify-center">
+                        <i :class="isMusicPlaying ? 'fa-solid fa-circle-pause rotating' : 'fa-solid fa-circle-play'" class="text-xl opacity-60"></i>
+                    </button>
+                    <button v-if="currentPage !== 'workshop'" @click="enterWorkshop" class="text-[#4a3728] opacity-50 hover:opacity-100 transition p-2">
+                        <i class="fa-solid fa-paintbrush"></i>
+                    </button>
+                </div>
+            </header>
+
+            <transition name="fade" mode="out-in">
+                <!-- 1. 缘起之遇 -->
+                <div v-if="currentPage === 'home'" key="home" class="p-6">
+                    <div class="flex justify-between items-center mb-10">
+                        <h3 class="text-sm font-bold border-l-4 border-[#4a3728] pl-3 tracking-widest opacity-70">缘起之遇</h3>
+                        <button @click="openModal('addCharacter')" class="text-[10px] bg-[#4a3728] text-white px-5 py-2 rounded-full btn-active shadow-md">
+                             <i class="fa-solid fa-feather mr-1"></i> 结缘
+                        </button>
+                    </div>
+                    
+                    <div v-if="characters.length === 0" class="py-32 text-center opacity-30">
+                        <i class="fa-solid fa-wind text-3xl mb-4"></i>
+                        <p class="text-sm">暂无缘分，待君落笔</p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div v-for="char in characters" :key="char.id" @click="selectCharacter(char)"
+                             class="character-card rounded-sm group">
+                            
+                            <div class="postal-days-stamp group-hover:border-[#8b0000]/60 transition-colors">
+                                <span>SINCE</span>
+                                <span>{{ calculateDays(char.startDate) }}</span>
+                                <span>DAYS</span>
+                            </div>
+
+                            <div class="flex gap-5 items-start">
+                                <div class="flex-shrink-0 polaroid-frame">
+                                    <img :src="char.avatar || 'https://via.placeholder.com/100?text=None'" 
+                                         class="w-20 h-20 object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-500">
+                                </div>
+
+                                <div class="flex-1 pt-1">
+                                    <div class="mb-1">
+                                        <h4 class="font-bold text-xl tracking-tighter">{{ char.name }}</h4>
+                                        <p class="text-[10px] opacity-40 italic tracking-widest uppercase">{{ char.nickname }}</p>
+                                    </div>
+                                    <div class="flex flex-wrap gap-1.5 mt-3">
+                                        <span v-for="tag in char.tags" 
+                                              class="text-[9px] px-2 py-0.5 bg-black/5 text-[#4a3728] border border-black/5 rounded-sm opacity-60 group-hover:opacity-100 transition-opacity">
+                                            {{ tag }}
+                                        </span>
+                                    </div>
+                                    <div class="mt-4 pt-2 border-t border-black/5 flex justify-between items-center">
+                                        <span class="text-[8px] opacity-30 uppercase tracking-tighter">Encounters · {{ char.startDate }}</span>
+                                        <i class="fa-solid fa-chevron-right text-[8px] opacity-0 group-hover:opacity-20 transition-all translate-x-2 group-hover:translate-x-0"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 角色详情 -->
+                <div v-else-if="currentPage === 'detail'" key="detail" class="relative">
+                    <div class="flex border-b bg-white/30 backdrop-blur-md z-30">
+                        <button v-for="tab in ['imprint', 'sentiments', 'echoes', 'chronicles']" 
+                                :key="tab" @click="currentTab = tab"
+                                :class="{'border-b-2 border-[#4a3728] font-bold': currentTab === tab}"
+                                class="flex-1 py-3 text-[10px] tracking-widest transition-all opacity-60">
+                            {{ tabNameMap[tab] }}
+                        </button>
+                    </div>
+
+                    <div class="p-6">
+                        <!-- 旧影 -->
+                        <div v-if="currentTab === 'imprint'" class="text-center">
+                            <div class="mb-6 relative inline-block">
+                                <div class="paper-texture p-3 rounded shadow-2xl">
+                                    <img :src="currentCharacter.avatar" class="w-full h-80 object-cover rounded shadow-inner filter sepia-[0.1]">
+                                </div>
+                                <div class="absolute top-6 right-6"><div class="vintage-seal">流年珍藏</div></div>
+                            </div>
+                            <div class="bg-white/40 p-6 rounded-2xl border border-black/5 text-left mb-6 relative overflow-hidden">
+                                <h2 class="text-2xl font-bold font-cursive tracking-wider mb-2">{{ currentCharacter.name }}</h2>
+                                <div class="grid grid-cols-2 gap-4 text-[10px] mb-4">
+                                    <div><p class="opacity-40 uppercase mb-1">已相识</p><p class="font-bold text-sm">{{ calculateDays(currentCharacter.startDate) }} 天</p></div>
+                                    <div><p class="opacity-40 uppercase mb-1">缘起日期</p><p class="font-bold text-sm">{{ currentCharacter.startDate }}</p></div>
+                                </div>
+                                <div class="mb-4">
+                                    <p class="text-[9px] opacity-40 mb-2">印象标签</p>
+                                    <div class="flex flex-wrap gap-2"><span v-for="tag in currentCharacter.tags" class="px-2 py-0.5 bg-[#4a3728] text-white rounded text-[8px]">{{ tag }}</span></div>
+                                </div>
+                                <div><p class="text-[9px] opacity-40 mb-1">心语寄辞</p><p class="text-xs italic leading-relaxed">“{{ currentCharacter.motto || '此时无声胜有声' }}”</p></div>
+                            </div>
+                            <!-- 删除按钮下方返回主页按钮，已去除 -->
+                            <div class="mt-8 flex flex-col gap-3">
+                                <button @click="openModal('editCharacter')" class="text-[10px] opacity-30 hover:opacity-100 transition underline">修缮印记资料</button>
+                                <button @click="confirmDeleteCharacter(currentCharacter.id)" class="text-[10px] text-red-900 opacity-20 hover:opacity-100 transition">抹除此段缘分</button>
+                            </div>
+                        </div>
+
+                        <!-- 寄思 & 回响 -->
+                        <div v-if="currentTab === 'sentiments' || currentTab === 'echoes'">
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-[10px] opacity-40 font-bold uppercase tracking-widest">{{ tabNameMap[currentTab] }}</span>
+                                <button @click="openModal('addLetter')" class="text-[10px] border border-[#4a3728] px-3 py-1 rounded-full btn-active">落笔</button>
+                            </div>
+                            <div v-if="getLetters().length === 0" class="py-32 text-center opacity-30 border-2 border-dashed border-black/5 rounded-2xl"><p class="text-xs">云中谁寄锦书来？</p></div>
+                            <div v-else class="relative">
+                                <transition name="page-flip" mode="out-in">
+                                    <div :key="currentLetterIdx" id="letter-canvas" class="letter-display p-2" :style="getLetterStyle">
+                                        <div class="relative z-10" :style="getPaddingStyle">
+                                            <div class="flex justify-between items-start mb-6"><h2 class="text-xl font-bold border-b border-black/10 pb-2 flex-1" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().title }}</h2></div>
+                                            <p class="text-[10px] opacity-40 mb-6 italic" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().date }}</p>
+                                            <div class="letter-content whitespace-pre-wrap leading-relaxed" :style="{fontSize: getActiveLetterConfig().fontSize + 'px', color: getActiveLetterConfig().textColor, fontFamily: getActiveLetterConfig().fontFamily}">
+                                                <p v-for="(para, pIdx) in (getCurrentLetter().content || '').split('\n')" :key="pIdx">{{ para }}</p>
+                                            </div>
+                                            <div class="mt-16 text-right opacity-30 text-[9px] tracking-tighter" :style="{color: getActiveLetterConfig().textColor}">—— 载于 流年函匣 ——</div>
+                                        </div>
+                                    </div>
+                                </transition>
+                                <div class="mt-6 flex gap-4">
+                                    <button @click="exportLetterImage" class="flex-1 text-[10px] py-2 bg-white border border-[#4a3728] rounded-lg btn-active font-bold shadow-sm">保存长图</button>
+                                    <button @click="editCurrentLetter" class="flex-1 text-[10px] py-2 border border-black/10 rounded-lg btn-active opacity-50">重写此信</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 羁绊纪年 (美化修改版) -->
+                        <div v-if="currentTab === 'chronicles'" class="relative pl-6 pr-2 py-4">
+                            <!-- 垂直时间线轴 -->
+                            <div class="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#4a3728]/20 to-transparent"></div>
+                            
+                            <div class="flex justify-between items-center mb-10">
+                                <span class="text-[10px] opacity-40 font-bold uppercase tracking-widest pl-4">岁序流轴</span>
+                                <div class="flex gap-2">
+                                    <button @click="openModal('addTimelineEvent')" class="text-[10px] border border-[#4a3728] px-3 py-1 rounded-full btn-active bg-white/50">添笔</button>
+                                    <button @click="openModal('editTimeline')" class="text-[10px] opacity-40 underline btn-active">编辑整体</button>
+                                </div>
+                            </div>
+
+                            <div v-if="parsedTimeline.length === 0" class="py-32 text-center opacity-30"><p class="text-xs italic">岁序尚白，待君落墨</p></div>
+                            
+                            <div v-else class="space-y-10">
+                                <div v-for="(item, i) in parsedTimeline" :key="i" class="relative group">
+                                    <!-- 阶段标题 -->
+                                    <div v-if="item.type === 'stage'" class="text-center py-4 relative z-10">
+                                        <span class="bg-[#4a3728] text-[#f4ead5] px-6 py-1.5 text-[10px] rounded-full shadow-lg tracking-widest border border-white/20">
+                                            {{ item.content }}
+                                        </span>
+                                    </div>
+                                    <!-- 事件节点卡片 (修改后的左右结构) -->
+                                    <div v-else @click="viewTimelineDetail(item, i)" class="relative pl-10 cursor-pointer">
+                                        <div class="absolute left-[-1px] top-1.5 w-3 h-3 rounded-full border-2 border-[#4a3728] bg-[#f4ead5] transition-transform group-hover:scale-125 z-10"></div>
+                                        
+                                        <div class="bg-white/40 p-4 rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-all group-hover:bg-white/60 flex gap-4">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="mb-1">
+                                                    <span class="text-[9px] font-bold text-[#4a3728] opacity-40 block uppercase tracking-tighter">{{ item.date }}</span>
+                                                    <h4 class="text-[12px] font-bold tracking-tight text-[#4a3728] group-hover:text-black truncate">{{ item.event }}</h4>
+                                                </div>
+                                                <p class="text-[11px] opacity-60 leading-relaxed italic line-clamp-3">{{ item.desc }}</p>
+                                                
+                                                <!-- 有内容的羽毛笔标识 -->
+                                                <div v-if="item.fullDesc" class="mt-2 opacity-30">
+                                                    <i class="fa-solid fa-feather-pointed text-[9px]"></i>
+                                                </div>
+                                            </div>
+
+                                            <!-- 侧位小图 -->
+                                            <div v-if="item.imgUrl" class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-black/5 shadow-inner">
+                                                <img :src="item.imgUrl" class="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 时光工坊 -->
+                <div v-else-if="currentPage === 'workshop'" key="workshop" class="p-6">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="text-lg font-bold border-l-4 border-[#4a3728] pl-3">时光工坊</h3>
+                        <button @click="goHome" class="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center btn-active"><i class="fa-solid fa-xmark text-xs"></i></button>
+                    </div>
+                    <div class="mb-8">
+                        <p class="text-[10px] opacity-40 mb-3 px-2 uppercase tracking-widest font-bold">排版实时预览</p>
+                        <div class="preview-container">
+                            <div class="letter-display preview-mini" :style="getLetterPreviewStyle">
+                                <div class="relative z-10" :style="getPaddingPreviewStyle">
+                                    <div class="letter-content whitespace-pre-wrap leading-relaxed" :style="getLetterFontPreviewStyle">
+                                        <p>我爱你。</p>
+                                        <p>我讨厌距离、阴影、痛苦、下雨。</p>
+                                        <p>我想要明亮的日子，和你一起，靠着大海和沙滩……</p>
+                                        <p>可是我在等你，身无片甲，赤手空拳。</p>
+                                        </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
+                            <div class="flex justify-between items-center mb-4"><h4 class="font-bold text-xs flex items-center gap-2"><i class="fa-solid fa-bookmark"></i> 预设方案</h4><button @click="openModal('savePreset')" class="text-[9px] bg-[#4a3728] text-white px-2 py-1 rounded">保存预设</button></div>
+                            <div v-if="tempSettings.stationeryPresets.length === 0" class="text-center py-4 opacity-30 text-[10px]">暂无预设</div>
+                            <div class="flex gap-3 overflow-x-auto pb-4 hide-scrollbar">
+                                <div v-for="(preset, pIdx) in tempSettings.stationeryPresets" :key="pIdx" class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative group transition-all">
+                                    <div @click="loadPreset(preset)" class="w-full h-10 rounded bg-cover mb-2 cursor-pointer" :style="{backgroundImage: `url(${preset.config.bg})`}"></div>
+                                    <p class="text-[9px] font-bold truncate mb-2 text-center">{{ preset.name }}</p>
+                                    <div class="flex gap-1">
+                                        <button @click="applyToTab(preset, 'sentiments')" class="flex-1 text-[7px] py-1 bg-[#4a3728] text-white rounded">写信</button>
+                                        <button @click="applyToTab(preset, 'echoes')" class="flex-1 text-[7px] py-1 bg-red-800 text-white rounded">收信</button>
+                                    </div>
+                                    <button @click.stop="removePreset(pIdx)" class="absolute -top-1 -right-1 w-4 h-4 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-[8px]"><i class="fa-solid fa-trash-can scale-75"></i></button>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[8px] opacity-40">
+                                <span>当前寄思：{{ tempSettings.sentimentsPresetName || '默认' }}</span>
+                                <span>当前回响：{{ tempSettings.echoesPresetName || '默认' }}</span>
+                            </div>
+                        </section>
+                        <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
+                            <h4 class="font-bold text-xs mb-4 flex items-center gap-2"><i class="fa-solid fa-scroll"></i> 参数调节</h4>
+                            <div class="space-y-4">
+                                <div><label class="text-[9px] opacity-40 block mb-1">背景图 URL</label><input v-model="tempSettings.stationery.bg" class="vintage-input w-full text-xs"></div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label class="text-[9px] opacity-40 block mb-1">字体选择</label><select v-model="tempSettings.stationery.fontFamily" class="vintage-input w-full text-xs bg-transparent"><option value="'Zhi Mang Xing', cursive">手写草书</option><option value="'Noto Serif SC', serif">精美衬线</option><option value="'KaiTi', serif">复古楷体</option><option v-for="cf in tempSettings.customFonts" :key="cf.name" :value="cf.name">{{ cf.name }}</option></select></div>
+                                    <div><label class="text-[9px] opacity-40 block mb-1">文字颜色</label><input type="color" v-model="tempSettings.stationery.textColor" class="w-full h-8 bg-transparent border-none"></div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-x-6 gap-y-4"><div v-for="pos in ['Top', 'Bottom', 'Left', 'Right']" :key="pos"><label class="text-[9px] opacity-40 block">{{ pos }} ({{ tempSettings.stationery['p'+pos] }}px)</label><input type="range" min="0" max="150" v-model="tempSettings.stationery['p'+pos]" class="w-full accent-[#4a3728]"></div></div>
+                                <div><label class="text-[9px] opacity-40 block mb-1">字号 ({{ tempSettings.stationery.fontSize }}px)</label><input type="range" min="12" max="32" v-model="tempSettings.stationery.fontSize" class="w-full accent-[#4a3728]"></div>
+                            </div>
+                        </section>
+                        <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
+                            <h4 class="font-bold text-xs mb-4 flex items-center gap-2"><i class="fa-solid fa-font"></i> 字体库</h4>
+                            <div class="space-y-4">
+                                <div class="flex gap-2"><input v-model="fontInput.name" placeholder="字体名" class="vintage-input flex-1 text-[10px]"><input v-model="fontInput.url" placeholder="URL" class="vintage-input flex-[2] text-[10px]"><button @click="addCustomFont" class="bg-[#4a3728] text-white px-2 py-1 rounded text-[10px]">添加</button></div>
+                                <div class="space-y-2 max-h-32 overflow-y-auto pr-2 hide-scrollbar"><div v-for="(cf, idx) in tempSettings.customFonts" :key="idx" class="flex justify-between items-center text-[9px] bg-black/5 p-2 rounded"><span class="font-bold">{{ cf.name }}</span><button @click="removeCustomFont(idx)" class="text-red-800 opacity-40"><i class="fa-solid fa-trash"></i></button></div></div>
+                            </div>
+                        </section>
+                        <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
+                            <h4 class="font-bold text-xs mb-4 flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles"></i> 界面修饰</h4>
+                            <div class="space-y-4">
+                                <div><label class="text-[9px] opacity-40 block mb-2">系统全局字体</label><select v-model="tempSettings.theme.globalFont" class="vintage-input w-full text-xs bg-transparent"><option value="'Noto Serif SC', serif">默认衬线</option><option value="'SimHei', sans-serif">现代黑体</option><option value="'STKaiti', serif">经典楷体</option><option v-for="cf in tempSettings.customFonts" :key="cf.name" :value="cf.name">{{ cf.name }}</option></select></div>
+                                <div><label class="text-[9px] opacity-40 block mb-3">氛围背景色</label><div class="flex gap-3"><button v-for="color in themeOptions" :key="color" @click="tempSettings.theme.bgColor = color" :class="RingThemeClass(color)" class="w-7 h-7 rounded-full shadow-inner border border-black/5" :style="{backgroundColor: color}"></button><input type="color" v-model="tempSettings.theme.bgColor" class="w-7 h-7 bg-transparent border-none"></div></div>
+                            </div>
+                        </section>
+                        <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
+                            <h4 class="font-bold text-xs mb-4 flex items-center gap-2"><i class="fa-solid fa-database"></i> 记忆管理</h4>
+                            <div class="flex gap-2"><button @click="exportData" class="flex-1 text-[10px] py-2 bg-[#4a3728] text-white rounded-lg">导出备份</button><button @click="$refs.fileInput.click()" class="flex-1 text-[10px] py-2 border border-[#4a3728] rounded-lg">恢复</button><input type="file" ref="fileInput" class="hidden" @change="importData"></div>
+                        </section>
+                        <div class="pt-4 pb-8"><button @click="saveSettings" class="w-full bg-[#4a3728] text-[#f4ead5] py-4 rounded-2xl font-bold shadow-2xl btn-active tracking-widest"><i class="fa-solid fa-box-archive mr-2"></i> 封存配置</button></div>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- 弹窗 -->
+            <transition name="fade">
+                <div v-if="modal.show" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                    <div class="bg-[#fefaf0] w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 paper-texture max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-base tracking-widest">{{ modal.title }}</h3><button @click="modal.show = false" class="opacity-30 p-2"><i class="fa-solid fa-xmark"></i></button></div>
+
+                        <!-- 角色编辑 -->
+                        <div v-if="modal.type === 'addCharacter' || modal.type === 'editCharacter'" class="space-y-4">
+                            <input v-model="form.char.name" placeholder="角色姓名" class="vintage-input w-full text-sm">
+                            <input v-model="form.char.nickname" placeholder="昵称" class="vintage-input w-full text-sm">
+                            <input v-model="form.char.tags" placeholder="标签" class="vintage-input w-full text-sm">
+                            <input v-model="form.char.startDate" type="date" class="vintage-input w-full text-sm">
+                            <input v-model="form.char.avatar" placeholder="照片 URL" class="vintage-input w-full text-sm">
+                            <input v-model="form.char.bgmUrl" placeholder="BGM URL" class="vintage-input w-full text-sm">
+                            <textarea v-model="form.char.motto" placeholder="个性签名..." class="vintage-input w-full h-20 text-sm"></textarea>
+                            <button @click="saveCharacter" class="w-full bg-[#4a3728] text-white py-3 rounded-2xl font-bold mt-4 btn-active">定格</button>
+                        </div>
+
+                        <!-- 信件编辑 -->
+                        <div v-if="modal.type === 'addLetter' || modal.type === 'editLetter'" class="space-y-4">
+                            <input v-model="form.letter.title" placeholder="书信标题" class="vintage-input w-full text-sm">
+                            <input v-model="form.letter.date" type="date" class="vintage-input w-full text-sm">
+                            <textarea v-model="form.letter.content" placeholder="见字如晤..." class="vintage-input w-full h-48 text-sm leading-relaxed"></textarea>
+                            <button @click="saveLetter" class="w-full bg-[#4a3728] text-white py-3 rounded-2xl font-bold mt-4 btn-active">封缄</button>
+                        </div>
+
+                        <!-- 整体编辑纪年 -->
+                        <div v-if="modal.type === 'editTimeline'" class="space-y-4">
+                            <p class="text-[9px] opacity-40 mb-1">支持块格式解析详情</p>
+                            <textarea v-model="form.timeline" class="vintage-input w-full h-64 text-xs font-mono leading-loose" placeholder="# 恋爱前&#10;2023.01.01-初识-认识了他&#10;详细描述：[内容]&#10;图片：URL"></textarea>
+                            <button @click="saveTimeline" class="w-full bg-[#4a3728] text-white py-3 rounded-2xl font-bold mt-4 btn-active">整体封存</button>
+                        </div>
+
+                        <!-- 纪年项详情与编辑 (修改Bug：精准修改而非新增) -->
+                        <div v-if="modal.type === 'viewTimelineDetail'" class="space-y-6">
+                            <div v-if="!modal.isEditing">
+                                <div class="flex justify-between items-start border-b border-black/10 pb-3 mb-4">
+                                    <div class="flex-1 pr-4">
+                                        <p class="text-[10px] opacity-40 uppercase tracking-widest">{{ modal.data.date }}</p>
+                                        <h4 class="text-xl font-bold text-[#4a3728]">{{ modal.data.event }}</h4>
+                                    </div>
+                                    <button @click="modal.isEditing = true" class="text-[10px] border border-[#4a3728] px-3 py-1 rounded-full opacity-60 hover:opacity-100 flex-shrink-0">修笔</button>
+                                </div>
+                                <div v-if="modal.data.imgUrl" class="mb-5 rounded-2xl overflow-hidden shadow-lg border-4 border-white">
+                                    <img :src="modal.data.imgUrl" class="w-full h-auto max-h-72 object-cover">
+                                </div>
+                                <div class="letter-content leading-relaxed text-[13px] opacity-80 whitespace-pre-wrap font-serif-sc">
+                                    {{ modal.data.fullDesc || modal.data.desc }}
+                                </div>
+                            </div>
+                            <div v-else class="space-y-4">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input v-model="modal.data.date" placeholder="日期" class="vintage-input w-full text-xs">
+                                    <input v-model="modal.data.event" placeholder="标题" class="vintage-input w-full text-xs">
+                                </div>
+                                <input v-model="modal.data.desc" placeholder="简述" class="vintage-input w-full text-xs">
+                                <input v-model="modal.data.imgUrl" placeholder="插图 URL" class="vintage-input w-full text-xs">
+                                <textarea v-model="modal.data.fullDesc" placeholder="详细描述详情故事..." class="vintage-input w-full h-48 text-sm leading-loose"></textarea>
+                                <div class="flex gap-2 pt-2">
+                                    <button @click="saveSingleEventFromView" class="flex-1 bg-[#4a3728] text-white py-3 rounded-xl btn-active font-bold">保存修改</button>
+                                    <button @click="modal.isEditing = false" class="px-6 py-3 border border-black/10 rounded-xl opacity-40 text-xs">取消</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 添笔新纪项 -->
+                        <div v-if="modal.type === 'addTimelineEvent'" class="space-y-4">
+                            <input v-model="form.event.category" placeholder="分类 (可选, 如: 恋爱中)" class="vintage-input w-full text-sm">
+                            <input v-model="form.event.date" placeholder="日期 (2023.01.01)" class="vintage-input w-full text-sm">
+                            <input v-model="form.event.title" placeholder="标题" class="vintage-input w-full text-sm">
+                            <input v-model="form.event.desc" placeholder="简述" class="vintage-input w-full text-sm">
+                            <input v-model="form.event.imgUrl" placeholder="插图 URL (可选)" class="vintage-input w-full text-sm">
+                            <textarea v-model="form.event.fullDesc" placeholder="详细描述详情故事..." class="vintage-input w-full h-32 text-sm leading-relaxed"></textarea>
+                            <button @click="saveSingleEvent" class="w-full bg-[#4a3728] text-white py-3 rounded-2xl font-bold mt-4 btn-active">镌刻</button>
+                        </div>
+
+                        <!-- 预设保存 -->
+                        <div v-if="modal.type === 'savePreset'" class="space-y-4"><input v-model="form.presetName" placeholder="预设方案名称" class="vintage-input w-full text-sm"><button @click="confirmSavePreset" class="w-full bg-[#4a3728] text-white py-3 rounded-2xl font-bold btn-active">封存方案</button></div>
+                    </div>
+                </div>
+            </transition>
+        </main>
+        <audio ref="bgmPlayer" :src="currentCharacter.bgmUrl" loop></audio>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const currentPage = ref('home');
+                const currentTab = ref('imprint');
+                const characters = ref(JSON.parse(localStorage.getItem('lyhx_chars')) || []);
+                const letters = ref(JSON.parse(localStorage.getItem('lyhx_letters')) || {});
+                const currentCharacter = ref({});
+                const currentLetterIdx = ref(0);
+                const isMusicPlaying = ref(false);
+                const bgmPlayer = ref(null);
+                const isLocked = ref(false);
+                const pinInput = ref(['', '', '', '']);
+
+                const defaultStationery = { bg: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?q=80&w=1000&auto=format&fit=crop', pTop: 40, pBottom: 40, pLeft: 30, pRight: 30, fontSize: 18, textColor: '#4a3728', fontFamily: "'Zhi Mang Xing', cursive" };
+                const initialSettings = JSON.parse(localStorage.getItem('lyhx_settings')) || {};
+                const settings = reactive({ stationery: initialSettings.stationery || { ...defaultStationery }, sentimentsConfig: initialSettings.sentimentsConfig || { ...defaultStationery }, echoesConfig: initialSettings.echoesConfig || { ...defaultStationery }, sentimentsPresetName: initialSettings.sentimentsPresetName || '默认', echoesPresetName: initialSettings.echoesPresetName || '默认', stationeryPresets: initialSettings.stationeryPresets || [], theme: initialSettings.theme || { bgColor: '#f4ead5', globalFont: "'Noto Serif SC', serif" }, customFonts: initialSettings.customFonts || [], privacy: initialSettings.privacy || { enabled: false, pin: '' } });
+
+                const tempSettings = reactive({}); 
+                const fontInput = reactive({ name: '', url: '' });
+                const themeOptions = ['#f4ead5', '#e8e6e1', '#d8e2dc', '#fcd5ce', '#9eb5c4'];
+
+                watch([characters, letters], () => { localStorage.setItem('lyhx_chars', JSON.stringify(characters.value)); localStorage.setItem('lyhx_letters', JSON.stringify(letters.value)); }, { deep: true });
+
+                const applyCustomFontsToPage = (fonts) => { const styleEl = document.getElementById('custom-fonts-style'); if (!styleEl) return; let css = ''; fonts.forEach(f => { css += `@font-face { font-family: "${f.name}"; src: url("${f.url}"); font-display: swap; }\n`; }); styleEl.innerHTML = css; };
+                const enterWorkshop = () => { Object.assign(tempSettings, JSON.parse(JSON.stringify(settings))); applyCustomFontsToPage(tempSettings.customFonts); currentPage.value = 'workshop'; };
+                const addCustomFont = () => { if (!fontInput.name || !fontInput.url) return; tempSettings.customFonts.push({ name: fontInput.name, url: fontInput.url }); applyCustomFontsToPage(tempSettings.customFonts); fontInput.name = ''; fontInput.url = ''; };
+                const removeCustomFont = (idx) => { tempSettings.customFonts.splice(idx, 1); applyCustomFontsToPage(tempSettings.customFonts); };
+                const saveSettings = () => { Object.assign(settings, JSON.parse(JSON.stringify(tempSettings))); localStorage.setItem('lyhx_settings', JSON.stringify(settings)); applyCustomFontsToPage(settings.customFonts); alert('配置已封存应用'); goHome(); };
+                const confirmSavePreset = () => { if(!form.presetName) return; tempSettings.stationeryPresets.push({ name: form.presetName, config: JSON.parse(JSON.stringify(tempSettings.stationery)) }); form.presetName = ''; modal.show = false; };
+                const loadPreset = (preset) => { tempSettings.stationery = JSON.parse(JSON.stringify(preset.config)); };
+                const applyToTab = (preset, type) => { if (type === 'sentiments') { tempSettings.sentimentsConfig = JSON.parse(JSON.stringify(preset.config)); tempSettings.sentimentsPresetName = preset.name; } else { tempSettings.echoesConfig = JSON.parse(JSON.stringify(preset.config)); tempSettings.echoesPresetName = preset.name; } alert(`已设为${type === 'sentiments' ? '寄思' : '回响'}背景`); };
+                const removePreset = (idx) => { tempSettings.stationeryPresets.splice(idx, 1); };
+                const goHome = () => { currentPage.value = 'home'; if(bgmPlayer.value) { bgmPlayer.value.pause(); bgmPlayer.value.currentTime = 0; } isMusicPlaying.value = false; };
+                const calculateDays = (dateStr) => { if (!dateStr) return 0; try { const d = new Date(dateStr.replace(/[年|月]/g, '-').replace('日', '')); if (isNaN(d.getTime())) return 0; return Math.max(0, Math.floor((new Date() - d) / 86400000)); } catch(e) { return 0; } };
+                const selectCharacter = (char) => { currentCharacter.value = char; currentPage.value = 'detail'; currentTab.value = 'imprint'; currentLetterIdx.value = 0; isMusicPlaying.value = false; if(bgmPlayer.value) { bgmPlayer.value.pause(); bgmPlayer.value.currentTime = 0; } };
+
+                const modal = reactive({ show: false, type: '', title: '', data: null, isEditing: false });
+                const form = reactive({ char: {}, letter: {}, timeline: '', event: { category: '', date: '', title: '', desc: '', fullDesc: '', imgUrl: '' }, presetName: '' });
+
+                const openModal = (type, data = null) => {
+                    modal.type = type; modal.show = true; modal.isEditing = false;
+                    if (type === 'addCharacter') { modal.title = '建立新缘分'; form.char = { name: '', nickname: '', tags: '', startDate: '', avatar: '', motto: '', bgmUrl: '' }; }
+                    else if (type === 'editCharacter') { modal.title = '修缮印记'; form.char = { ...currentCharacter.value }; if (Array.isArray(form.char.tags)) form.char.tags = form.char.tags.join(','); }
+                    else if (type === 'addLetter') { modal.title = '落笔成书'; form.letter = { title: '', date: new Date().toISOString().split('T')[0], content: '' }; }
+                    else if (type === 'editLetter') { modal.title = '重写锦书'; form.letter = { ...data }; }
+                    else if (type === 'editTimeline') { modal.title = '整体编撰岁序'; form.timeline = currentCharacter.value.timelineRaw || ''; }
+                    else if (type === 'addTimelineEvent') { modal.title = '添笔新纪'; form.event = { category: '', date: '', title: '', desc: '', fullDesc: '', imgUrl: '' }; }
+                    else if (type === 'savePreset') { modal.title = '保存预设方案'; }
+                };
+
+                const saveCharacter = () => { const charData = { ...form.char, id: form.char.id || Date.now(), tags: typeof form.char.tags === 'string' ? form.char.tags.split(/[,，]/).map(t => t.trim()) : form.char.tags }; if (modal.type === 'addCharacter') { characters.value.push(charData); } else { const idx = characters.value.findIndex(c => c.id === charData.id); characters.value[idx] = charData; currentCharacter.value = charData; } modal.show = false; };
+                const confirmDeleteCharacter = (id) => { if (confirm('抹除后记忆不可追。确定吗？')) { characters.value = characters.value.filter(c => c.id !== id); delete letters.value[id]; localStorage.setItem('lyhx_chars', JSON.stringify(characters.value)); localStorage.setItem('lyhx_letters', JSON.stringify(letters.value)); goHome(); } };
+                const getLetters = () => { const charId = currentCharacter.value.id; if (!letters.value[charId]) letters.value[charId] = { sentiments: [], echoes: [] }; return letters.value[charId][currentTab.value] || []; };
+                const getCurrentLetter = () => getLetters()[currentLetterIdx.value] || {};
+                const editCurrentLetter = () => { openModal('editLetter', getCurrentLetter()); };
+                const saveLetter = () => { const charId = currentCharacter.value.id; if (!letters.value[charId]) letters.value[charId] = { sentiments: [], echoes: [] }; const list = letters.value[charId][currentTab.value]; if (modal.type === 'addLetter') { list.unshift({ ...form.letter }); } else { list[currentLetterIdx.value] = { ...form.letter }; } modal.show = false; };
+                
+                const saveTimeline = () => { currentCharacter.value.timelineRaw = form.timeline; modal.show = false; };
+
+                const parseDateForSort = (str) => {
+                    if (!str) return 0;
+                    const clean = str.replace(/[年月日]/g, '-').replace(/\.$/, '').replace(/\./g, '-');
+                    const d = new Date(clean);
+                    return isNaN(d.getTime()) ? 0 : d.getTime();
+                };
+
+                const viewTimelineDetail = (item, index) => {
+                    modal.type = 'viewTimelineDetail';
+                    modal.title = '纪年详情';
+                    modal.data = JSON.parse(JSON.stringify(item)); // 深拷贝防止即时篡改
+                    modal.data._original_index = index; // 记录在 parsedTimeline 中的位置
+                    modal.show = true;
+                };
+
+                const rebuildTimelineRaw = (eventsList) => {
+                    let newRaw = "";
+                    let lastCat = "";
+                    eventsList.forEach(ev => {
+                        if (ev.category && ev.category !== lastCat) {
+                            newRaw += `# ${ev.category}\n`;
+                            lastCat = ev.category;
+                        } else if (!ev.category && lastCat) {
+                            lastCat = "";
+                        }
+                        newRaw += `${ev.date}-${ev.event}-${ev.desc}\n`;
+                        if (ev.fullDesc) newRaw += `详细描述：[\n${ev.fullDesc}\n]\n`;
+                        if (ev.imgUrl) newRaw += `图片：${ev.imgUrl}\n`;
+                    });
+                    return newRaw;
+                };
+
+                const saveSingleEvent = () => {
+                    const { category, date, title, desc, fullDesc, imgUrl } = form.event;
+                    if (!date || !title) return;
+                    let events = [...parsedTimeline.value].filter(e => e.type === 'event');
+                    events.push({ date, event: title, desc, category, fullDesc, imgUrl, type: 'event' });
+                    events.sort((a, b) => parseDateForSort(a.date) - parseDateForSort(b.date));
+                    currentCharacter.value.timelineRaw = rebuildTimelineRaw(events);
+                    modal.show = false;
+                };
+
+                // 修复：精准修改 Bug，不再添加新条目
+                const saveSingleEventFromView = () => {
+                    const editedItem = modal.data;
+                    // 获取当前展开的所有条目（包括 stage）
+                    let fullList = [...parsedTimeline.value];
+                    
+                    // 找到在原始数组中的位置进行替换
+                    // 由于 parsedTimeline 包含 stage 标识，我们需要找到对应 index
+                    fullList[editedItem._original_index] = { ...editedItem, type: 'event' };
+                    
+                    // 过滤出纯 event 数据用于 rebuild
+                    const pureEvents = fullList.filter(item => item.type === 'event');
+                    pureEvents.sort((a, b) => parseDateForSort(a.date) - parseDateForSort(b.date));
+                    
+                    currentCharacter.value.timelineRaw = rebuildTimelineRaw(pureEvents);
+                    modal.isEditing = false;
+                    modal.show = false; // 存志后自动关闭
+                };
+
+                const parsedTimeline = computed(() => {
+                    const raw = currentCharacter.value.timelineRaw || "";
+                    const lines = raw.split('\n');
+                    let result = [];
+                    let currentCategory = "";
+                    let currentEvent = null;
+
+                    for (let i = 0; i < lines.length; i++) {
+                        let line = lines[i].trim();
+                        if (!line) continue;
+
+                        if (line.startsWith('#')) {
+                            currentCategory = line.replace('#', '').trim();
+                            result.push({ type: 'stage', content: currentCategory });
+                        } else if (line.startsWith('详细描述：[')) {
+                            let content = "";
+                            i++; 
+                            while (i < lines.length && !lines[i].trim().endsWith(']')) {
+                                content += lines[i] + "\n";
+                                i++;
+                            }
+                            if (currentEvent) currentEvent.fullDesc = content.trim();
+                        } else if (line.startsWith('图片：')) {
+                            if (currentEvent) currentEvent.imgUrl = line.replace('图片：', '').trim();
+                        } else if (line.includes('-')) {
+                            const [d, e, s] = line.split('-');
+                            currentEvent = { type: 'event', date: d, event: e || "无题", desc: s || "", category: currentCategory, fullDesc: '', imgUrl: '' };
+                            result.push(currentEvent);
+                        }
+                    }
+                    return result;
+                });
+
+                const toggleMusic = () => { if (!bgmPlayer.value) return; if (isMusicPlaying.value) { bgmPlayer.value.pause(); } else { bgmPlayer.value.play().catch(() => { isMusicPlaying.value = false; }); } isMusicPlaying.value = !isMusicPlaying.value; };
+                const exportLetterImage = () => { const area = document.getElementById('letter-canvas'); html2canvas(area, { useCORS: true, scale: 2 }).then(canvas => { const link = document.createElement('a'); link.download = `流年书信-${getCurrentLetter().title}.png`; link.href = canvas.toDataURL(); link.click(); }); };
+                const exportData = () => { const outSettings = currentPage.value === 'workshop' ? tempSettings : settings; const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: outSettings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
+                const importData = (e) => { const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); characters.value = data.characters || []; letters.value = data.letters || {}; Object.assign(settings, data.settings); localStorage.setItem('lyhx_settings', JSON.stringify(settings)); if (currentPage.value === 'workshop') Object.assign(tempSettings, JSON.parse(JSON.stringify(data.settings))); applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); } catch (err) { alert('导入失败，请检查文件格式。'); } }; reader.readAsText(e.target.files[0]); };
+                const clearAllData = () => { if (confirm('确认清空？')) { localStorage.clear(); location.reload(); } };
+                const handlePinInput = (i, e) => { if (e.target.value && i < 3) e.target.nextElementSibling.focus(); };
+                const checkPin = () => { if (pinInput.value.join('') === settings.privacy.pin) isLocked.value = false; else { alert('钥纹错误'); pinInput.value = ['', '', '', '']; } };
+
+                const RingThemeClass = (color) => { const activeColor = currentPage.value === 'workshop' ? tempSettings.theme.bgColor : settings.theme.bgColor; return activeColor === color ? 'ring-2 ring-black/20 ring-offset-2' : ''; };
+                const tabNameMap = { imprint: '旧影', sentiments: '寄思', echoes: '回响', chronicles: '纪年' };
+                const getActiveLetterConfig = () => currentTab.value === 'sentiments' ? settings.sentimentsConfig : settings.echoesConfig;
+                const getLetterStyle = computed(() => ({ backgroundImage: `url(${getActiveLetterConfig().bg})` }));
+                const getPaddingStyle = computed(() => ({ padding: `${getActiveLetterConfig().pTop}px ${getActiveLetterConfig().pRight}px ${getActiveLetterConfig().pBottom}px ${getActiveLetterConfig().pLeft}px` }));
+                const getLetterPreviewStyle = computed(() => ({ backgroundImage: `url(${tempSettings.stationery?.bg})` }));
+                const getPaddingPreviewStyle = computed(() => ({ padding: `${tempSettings.stationery?.pTop}px ${tempSettings.stationery?.pRight}px ${tempSettings.stationery?.pBottom}px ${tempSettings.stationery?.pLeft}px` }));
+                const getLetterFontPreviewStyle = computed(() => ({ fontSize: tempSettings.stationery?.fontSize + 'px', color: tempSettings.stationery?.textColor, fontFamily: tempSettings.stationery?.fontFamily }));
+
+                onMounted(() => { if (settings.privacy.enabled && settings.privacy.pin) isLocked.value = true; applyCustomFontsToPage(settings.customFonts || []); });
+
+                return {
+                    currentPage, currentTab, characters, currentCharacter, settings, tempSettings, fontInput, themeOptions,
+                    tabNameMap, modal, form, isMusicPlaying, bgmPlayer, isLocked, pinInput, currentLetterIdx,
+                    goHome, calculateDays, selectCharacter, openModal, saveCharacter, confirmDeleteCharacter, enterWorkshop, saveSettings,
+                    addCustomFont, removeCustomFont, confirmSavePreset, loadPreset, applyToTab, removePreset,
+                    getLetters, getCurrentLetter, saveLetter, editCurrentLetter, saveTimeline, saveSingleEvent, viewTimelineDetail, saveSingleEventFromView,
+                    toggleMusic, exportLetterImage, exportData, importData, clearAllData, handlePinInput, checkPin,
+                    parsedTimeline, getLetterStyle, getPaddingStyle, getLetterPreviewStyle, getPaddingPreviewStyle, getLetterFontPreviewStyle, getActiveLetterConfig, RingThemeClass
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
