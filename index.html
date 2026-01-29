@@ -127,6 +127,8 @@
 
         .letter-content p {
             margin-bottom: 0.5em;
+            /* 新增：首行空2格 */
+            text-indent: 2em;
         }
 
         .preview-container {
@@ -162,6 +164,16 @@
 
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .timeline-line {
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: var(--sepia-dark);
+            opacity: 0.2;
+        }
 
         .character-card {
             position: relative;
@@ -360,13 +372,14 @@
                     <div class="flex border-b bg-white/30 backdrop-blur-md z-30">
                         <button v-for="tab in ['imprint', 'sentiments', 'echoes', 'chronicles']" 
                                 :key="tab" @click="currentTab = tab"
-                                :style="currentTab === tab ? { borderBottom: '2px solid ' + settings.theme.textColor, fontWeight: 'bold' } : {}"
+                                :style="currentTab === tab ? { borderBottom: '2px solid #4a3728', fontWeight: 'bold' } : {}"
                                 class="flex-1 py-3 text-[10px] tracking-widest transition-all opacity-60">
                             {{ tabNameMap[tab] }}
                         </button>
                     </div>
 
-                    <div class="p-6">
+                    <!-- 修改：根据当前标签动态调整内边距，信件页面边距更窄（即内容占比更大） -->
+                    <div :class="['sentiments', 'echoes'].includes(currentTab) ? 'px-2 py-6' : 'p-6'">
                         <!-- 旧影 -->
                         <div v-if="currentTab === 'imprint'" class="text-center">
                             <div class="mb-6 relative inline-block">
@@ -384,7 +397,7 @@
                                 <div class="mb-4">
                                     <p class="text-[9px] opacity-40 mb-2">印象标签</p>
                                     <div class="flex flex-wrap gap-2">
-                                        <span v-for="tag in currentCharacter.tags" class="px-2 py-0.5 text-white rounded text-[8px]" :style="{ backgroundColor: settings.theme.textColor }">{{ tag }}</span>
+                                        <span v-for="tag in currentCharacter.tags" class="px-2 py-0.5 bg-[#4a3728] text-white rounded text-[8px]">{{ tag }}</span>
                                     </div>
                                 </div>
                                 <div><p class="text-[9px] opacity-40 mb-1">心语寄辞</p><p class="text-xs italic leading-relaxed">“{{ currentCharacter.motto || '此时无声胜有声' }}”</p></div>
@@ -397,11 +410,12 @@
 
                         <!-- 寄思 & 回响 -->
                         <div v-if="currentTab === 'sentiments' || currentTab === 'echoes'">
-                            <div class="flex justify-between items-center mb-4">
+                            <!-- 在 px-2 环境下，内部按钮组稍微内收一点保持美观 -->
+                            <div class="flex justify-between items-center mb-4 px-2">
                                 <span class="text-[10px] opacity-40 font-bold uppercase tracking-widest">{{ tabNameMap[currentTab] }}</span>
-                                <button @click="openModal('addLetter')" class="text-[10px] border px-3 py-1 rounded-full btn-active transition-all" :style="{ borderColor: settings.theme.textColor }">落笔</button>
+                                <button @click="openModal('addLetter')" class="text-[10px] border border-[#4a3728] px-3 py-1 rounded-full btn-active">落笔</button>
                             </div>
-                            <div v-if="getLetters().length === 0" class="py-32 text-center opacity-30 border-2 border-dashed border-black/5 rounded-2xl"><p class="text-xs">云中谁寄锦书来？</p></div>
+                            <div v-if="getLetters().length === 0" class="py-32 text-center opacity-30 border-2 border-dashed border-black/5 rounded-2xl mx-2"><p class="text-xs">云中谁寄锦书来？</p></div>
                             <div v-else class="relative">
                                 <transition name="page-flip" mode="out-in">
                                     <div :key="currentLetterIdx" id="letter-canvas" class="letter-display p-2" :style="getLetterStyle">
@@ -409,15 +423,15 @@
                                             <div class="flex justify-between items-start mb-6"><h2 class="text-xl font-bold border-b border-black/10 pb-2 flex-1" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().title }}</h2></div>
                                             <p class="text-[10px] opacity-40 mb-6 italic" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().date }}</p>
                                             <div class="letter-content whitespace-pre-wrap leading-relaxed" :style="{fontSize: getActiveLetterConfig().fontSize + 'px', color: getActiveLetterConfig().textColor, fontFamily: getActiveLetterConfig().fontFamily}">
+                                                <!-- 段落渲染，已通过 CSS 实现了 text-indent: 2em -->
                                                 <p v-for="(para, pIdx) in (getCurrentLetter().content || '').split('\n')" :key="pIdx">{{ para }}</p>
                                             </div>
                                             <div class="mt-16 text-right opacity-30 text-[9px] tracking-tighter" :style="{color: getActiveLetterConfig().textColor}">—— 载于 流年函匣 ——</div>
                                         </div>
                                     </div>
                                 </transition>
-                                <div class="mt-6 flex gap-4">
-                                    <button @click="exportLetterImage" class="flex-1 text-[10px] py-2 bg-white border rounded-lg btn-active font-bold shadow-sm" :style="{ borderColor: settings.theme.textColor }">保存长图</button>
-                                    <button v-if="currentTab === 'sentiments'" @click="editCurrentLetter" class="flex-1 text-[10px] py-2 border border-black/10 rounded-lg btn-active opacity-50">重写此信</button>
+                                <div class="mt-6 flex gap-4 px-2">
+                                    <button @click="exportLetterImage" class="flex-1 text-[10px] py-2 bg-white border border-[#4a3728] rounded-lg btn-active font-bold shadow-sm">保存长图</button>
                                 </div>
                             </div>
                         </div>
@@ -429,7 +443,7 @@
                             <div class="flex justify-between items-center mb-10">
                                 <span class="text-[10px] opacity-40 font-bold uppercase tracking-widest pl-4">岁序流轴</span>
                                 <div class="flex gap-2">
-                                    <button @click="openModal('addTimelineEvent')" class="text-[10px] border px-3 py-1 rounded-full btn-active bg-white/50" :style="{ borderColor: settings.theme.textColor }">添笔</button>
+                                    <button @click="openModal('addTimelineEvent')" class="text-[10px] border border-[#4a3728] px-3 py-1 rounded-full btn-active bg-white/50" :style="{ borderColor: settings.theme.textColor }">添笔</button>
                                     <button @click="openModal('editTimeline')" class="text-[10px] opacity-40 underline btn-active">编辑整体</button>
                                 </div>
                             </div>
@@ -439,13 +453,12 @@
                             <div v-else class="space-y-10">
                                 <div v-for="(item, i) in parsedTimeline" :key="i" class="relative group">
                                     <div v-if="item.type === 'stage'" class="text-center py-4 relative z-10">
-                                        <span class="px-6 py-1.5 text-[10px] rounded-full shadow-lg tracking-widest border border-white/20" 
-                                              :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">
+                                        <span class="text-white bg-[#4a3728] px-6 py-1.5 text-[10px] rounded-full shadow-lg tracking-widest border border-white/20">
                                             {{ item.content }}
                                         </span>
                                     </div>
                                     <div v-else @click="viewTimelineDetail(item, i)" class="relative pl-10 cursor-pointer">
-                                        <div class="absolute left-[-1px] top-1.5 w-3 h-3 rounded-full border-2 transition-transform group-hover:scale-125 z-10" :style="{ borderColor: settings.theme.textColor, backgroundColor: settings.theme.bgColor }"></div>
+                                        <div class="absolute left-[-1px] top-1.5 w-3 h-3 rounded-full border-2 border-[#4a3728] bg-[#f4ead5] transition-transform group-hover:scale-125 z-10"></div>
                                         
                                         <div class="bg-white/40 p-4 rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-all group-hover:bg-white/60 flex gap-4">
                                             <div class="flex-1 min-w-0">
@@ -474,7 +487,7 @@
                 <!-- 3. 时光工坊 -->
                 <div v-else-if="currentPage === 'workshop'" key="workshop" class="p-6">
                     <div class="flex justify-between items-center mb-8">
-                        <h3 class="text-lg font-bold border-l-4 pl-3" :style="{ borderColor: settings.theme.textColor }">时光工坊</h3>
+                        <h3 class="text-lg font-bold border-l-4 border-[#4a3728] pl-3" :style="{ borderColor: settings.theme.textColor }">时光工坊</h3>
                     </div>
                     
                     <div class="space-y-6">
@@ -959,4 +972,3 @@
     </script>
 </body>
 </html>
-
