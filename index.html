@@ -100,8 +100,9 @@
         .letter-display {
             width: 100%;
             min-height: 520px;
-            background-size: cover;
-            background-position: center;
+            background-size: 100% auto;
+            background-repeat: repeat-y;
+            background-position: top center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
             border-radius: 4px;
             position: relative;
@@ -155,7 +156,6 @@
             opacity: 0.2;
         }
 
-        /* 重新设计的主页卡片样式 */
         .character-card {
             position: relative;
             background: rgba(255, 255, 255, 0.4);
@@ -285,8 +285,8 @@
 
                             <div class="flex gap-5 items-start">
                                 <div class="flex-shrink-0 polaroid-frame">
-                                    <img :src="char.avatar || 'https://via.placeholder.com/100?text=None'" 
-                                         class="w-20 h-20 object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-500">
+                                    <img :src="char.avatar || defaultAvatar" 
+                                         class="w-20 aspect-[3/4] object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-500">
                                 </div>
 
                                 <div class="flex-1 pt-1">
@@ -326,7 +326,7 @@
                         <div v-if="currentTab === 'imprint'" class="text-center">
                             <div class="mb-6 relative inline-block">
                                 <div class="paper-texture p-3 rounded shadow-2xl">
-                                    <img :src="currentCharacter.avatar" class="w-full h-80 object-cover rounded shadow-inner filter sepia-[0.1]">
+                                    <img :src="currentCharacter.avatar || defaultAvatar" class="w-full aspect-[3/4] object-cover rounded shadow-inner filter sepia-[0.1]">
                                 </div>
                                 <div class="absolute top-6 right-6"><div class="vintage-seal">流年珍藏</div></div>
                             </div>
@@ -342,7 +342,6 @@
                                 </div>
                                 <div><p class="text-[9px] opacity-40 mb-1">心语寄辞</p><p class="text-xs italic leading-relaxed">“{{ currentCharacter.motto || '此时无声胜有声' }}”</p></div>
                             </div>
-                            <!-- 删除按钮下方返回主页按钮，已去除 -->
                             <div class="mt-8 flex flex-col gap-3">
                                 <button @click="openModal('editCharacter')" class="text-[10px] opacity-30 hover:opacity-100 transition underline">修缮印记资料</button>
                                 <button @click="confirmDeleteCharacter(currentCharacter.id)" class="text-[10px] text-red-900 opacity-20 hover:opacity-100 transition">抹除此段缘分</button>
@@ -371,14 +370,13 @@
                                 </transition>
                                 <div class="mt-6 flex gap-4">
                                     <button @click="exportLetterImage" class="flex-1 text-[10px] py-2 bg-white border border-[#4a3728] rounded-lg btn-active font-bold shadow-sm">保存长图</button>
-                                    <button @click="editCurrentLetter" class="flex-1 text-[10px] py-2 border border-black/10 rounded-lg btn-active opacity-50">重写此信</button>
+                                    <button v-if="currentTab === 'sentiments'" @click="editCurrentLetter" class="flex-1 text-[10px] py-2 border border-black/10 rounded-lg btn-active opacity-50">重写此信</button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- 羁绊纪年 (美化修改版) -->
+                        <!-- 羁绊纪年 -->
                         <div v-if="currentTab === 'chronicles'" class="relative pl-6 pr-2 py-4">
-                            <!-- 垂直时间线轴 -->
                             <div class="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#4a3728]/20 to-transparent"></div>
                             
                             <div class="flex justify-between items-center mb-10">
@@ -393,13 +391,11 @@
                             
                             <div v-else class="space-y-10">
                                 <div v-for="(item, i) in parsedTimeline" :key="i" class="relative group">
-                                    <!-- 阶段标题 -->
                                     <div v-if="item.type === 'stage'" class="text-center py-4 relative z-10">
                                         <span class="bg-[#4a3728] text-[#f4ead5] px-6 py-1.5 text-[10px] rounded-full shadow-lg tracking-widest border border-white/20">
                                             {{ item.content }}
                                         </span>
                                     </div>
-                                    <!-- 事件节点卡片 (修改后的左右结构) -->
                                     <div v-else @click="viewTimelineDetail(item, i)" class="relative pl-10 cursor-pointer">
                                         <div class="absolute left-[-1px] top-1.5 w-3 h-3 rounded-full border-2 border-[#4a3728] bg-[#f4ead5] transition-transform group-hover:scale-125 z-10"></div>
                                         
@@ -407,17 +403,17 @@
                                             <div class="flex-1 min-w-0">
                                                 <div class="mb-1">
                                                     <span class="text-[9px] font-bold text-[#4a3728] opacity-40 block uppercase tracking-tighter">{{ item.date }}</span>
-                                                    <h4 class="text-[12px] font-bold tracking-tight text-[#4a3728] group-hover:text-black truncate">{{ item.event }}</h4>
+                                                    <!-- 禁止省略标题 -->
+                                                    <h4 class="text-[12px] font-bold tracking-tight text-[#4a3728] group-hover:text-black">{{ item.event }}</h4>
                                                 </div>
-                                                <p class="text-[11px] opacity-60 leading-relaxed italic line-clamp-3">{{ item.desc }}</p>
+                                                <!-- 禁止省略文字内容 -->
+                                                <p class="text-[11px] opacity-60 leading-relaxed italic">{{ item.desc }}</p>
                                                 
-                                                <!-- 有内容的羽毛笔标识 -->
                                                 <div v-if="item.fullDesc" class="mt-2 opacity-30">
                                                     <i class="fa-solid fa-feather-pointed text-[9px]"></i>
                                                 </div>
                                             </div>
 
-                                            <!-- 侧位小图 -->
                                             <div v-if="item.imgUrl" class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-black/5 shadow-inner">
                                                 <img :src="item.imgUrl" class="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700">
                                             </div>
@@ -433,25 +429,10 @@
                 <div v-else-if="currentPage === 'workshop'" key="workshop" class="p-6">
                     <div class="flex justify-between items-center mb-8">
                         <h3 class="text-lg font-bold border-l-4 border-[#4a3728] pl-3">时光工坊</h3>
-                        <button @click="goHome" class="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center btn-active"><i class="fa-solid fa-xmark text-xs"></i></button>
                     </div>
-                    <div class="mb-8">
-                        <p class="text-[10px] opacity-40 mb-3 px-2 uppercase tracking-widest font-bold">排版实时预览</p>
-                        <div class="preview-container">
-                            <div class="letter-display preview-mini" :style="getLetterPreviewStyle">
-                                <div class="relative z-10" :style="getPaddingPreviewStyle">
-                                    <div class="letter-content whitespace-pre-wrap leading-relaxed" :style="getLetterFontPreviewStyle">
-                                        <p>我爱你。</p>
-                                        <p>我讨厌距离、阴影、痛苦、下雨。</p>
-                                        <p>我想要明亮的日子，和你一起，靠着大海和沙滩，我想要奇幻的天空，我喜爱的国度，但是要和你在一起，和你在一起……我想要肉体、温度、石头、光滑的水，所有我们可以触摸的东西。</p>
-                                        <p>我恨做梦，我恨等待……</p>
-                                        <p>可是我在等你，身无片甲，赤手空拳。</p>
-                                        </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    
                     <div class="space-y-6">
+                        <!-- 预设部分保持不变 -->
                         <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
                             <div class="flex justify-between items-center mb-4"><h4 class="font-bold text-xs flex items-center gap-2"><i class="fa-solid fa-bookmark"></i> 预设方案</h4><button @click="openModal('savePreset')" class="text-[9px] bg-[#4a3728] text-white px-2 py-1 rounded">保存预设</button></div>
                             <div v-if="tempSettings.stationeryPresets.length === 0" class="text-center py-4 opacity-30 text-[10px]">暂无预设</div>
@@ -466,23 +447,46 @@
                                     <button @click.stop="removePreset(pIdx)" class="absolute -top-1 -right-1 w-4 h-4 bg-black/60 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-[8px]"><i class="fa-solid fa-trash-can scale-75"></i></button>
                                 </div>
                             </div>
-                            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[8px] opacity-40">
-                                <span>当前寄思：{{ tempSettings.sentimentsPresetName || '默认' }}</span>
-                                <span>当前回响：{{ tempSettings.echoesPresetName || '默认' }}</span>
-                            </div>
                         </section>
-                        <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
-                            <h4 class="font-bold text-xs mb-4 flex items-center gap-2"><i class="fa-solid fa-scroll"></i> 参数调节</h4>
-                            <div class="space-y-4">
-                                <div><label class="text-[9px] opacity-40 block mb-1">背景图 URL</label><input v-model="tempSettings.stationery.bg" class="vintage-input w-full text-xs"></div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label class="text-[9px] opacity-40 block mb-1">字体选择</label><select v-model="tempSettings.stationery.fontFamily" class="vintage-input w-full text-xs bg-transparent"><option value="'Zhi Mang Xing', cursive">手写草书</option><option value="'Noto Serif SC', serif">精美衬线</option><option value="'KaiTi', serif">复古楷体</option><option v-for="cf in tempSettings.customFonts" :key="cf.name" :value="cf.name">{{ cf.name }}</option></select></div>
-                                    <div><label class="text-[9px] opacity-40 block mb-1">文字颜色</label><input type="color" v-model="tempSettings.stationery.textColor" class="w-full h-8 bg-transparent border-none"></div>
+
+                        <!-- 修改：参数调节支持折叠，且包含预览 -->
+                        <section class="bg-white/50 rounded-2xl border border-black/5 overflow-hidden">
+                            <h4 @click="workshopUi.showParams = !workshopUi.showParams" 
+                                class="font-bold text-xs p-5 flex items-center justify-between cursor-pointer hover:bg-black/5 transition-colors">
+                                <span class="flex items-center gap-2"><i class="fa-solid fa-scroll"></i> 参数调节</span>
+                                <i :class="workshopUi.showParams ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="opacity-40 text-[10px]"></i>
+                            </h4>
+                            
+                            <div v-if="workshopUi.showParams" class="p-5 pt-0 space-y-6">
+                                <div class="mb-4">
+                                    <p class="text-[10px] opacity-40 mb-3 uppercase tracking-widest font-bold">排版实时预览</p>
+                                    <div class="preview-container">
+                                        <div class="letter-display preview-mini" :style="getLetterPreviewStyle">
+                                            <div class="relative z-10" :style="getPaddingPreviewStyle">
+                                                <div class="letter-content whitespace-pre-wrap leading-relaxed" :style="getLetterFontPreviewStyle">
+                                                    <p>我爱你。</p>
+                                                    <p>我讨厌距离、阴影、痛苦、下雨。</p>
+                                                    <p>我想要明亮的日子，和你一起，靠着大海和沙滩，我想要奇幻的天空，我喜爱的国度，但是要和你在一起，和你在一起……我想要肉体、温度、石头、光滑的水，所有我们可以触摸的东西。</p>
+                                                    <p>我恨做梦，我恨等待……</p>
+                                                    <p>可是我在等你，身无片甲，赤手空拳。</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-x-6 gap-y-4"><div v-for="pos in ['Top', 'Bottom', 'Left', 'Right']" :key="pos"><label class="text-[9px] opacity-40 block">{{ pos }} ({{ tempSettings.stationery['p'+pos] }}px)</label><input type="range" min="0" max="150" v-model="tempSettings.stationery['p'+pos]" class="w-full accent-[#4a3728]"></div></div>
-                                <div><label class="text-[9px] opacity-40 block mb-1">字号 ({{ tempSettings.stationery.fontSize }}px)</label><input type="range" min="12" max="32" v-model="tempSettings.stationery.fontSize" class="w-full accent-[#4a3728]"></div>
+
+                                <div class="space-y-4">
+                                    <div><label class="text-[9px] opacity-40 block mb-1">背景图 URL</label><input v-model="tempSettings.stationery.bg" class="vintage-input w-full text-xs"></div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div><label class="text-[9px] opacity-40 block mb-1">字体选择</label><select v-model="tempSettings.stationery.fontFamily" class="vintage-input w-full text-xs bg-transparent"><option value="'Zhi Mang Xing', cursive">手写草书</option><option value="'Noto Serif SC', serif">精美衬线</option><option value="'KaiTi', serif">复古楷体</option><option v-for="cf in tempSettings.customFonts" :key="cf.name" :value="cf.name">{{ cf.name }}</option></select></div>
+                                        <div><label class="text-[9px] opacity-40 block mb-1">文字颜色</label><input type="color" v-model="tempSettings.stationery.textColor" class="w-full h-8 bg-transparent border-none"></div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-x-6 gap-y-4"><div v-for="pos in ['Top', 'Bottom', 'Left', 'Right']" :key="pos"><label class="text-[9px] opacity-40 block">{{ pos }} ({{ tempSettings.stationery['p'+pos] }}px)</label><input type="range" min="0" max="150" v-model="tempSettings.stationery['p'+pos]" class="w-full accent-[#4a3728]"></div></div>
+                                    <div><label class="text-[9px] opacity-40 block mb-1">字号 ({{ tempSettings.stationery.fontSize }}px)</label><input type="range" min="12" max="32" v-model="tempSettings.stationery.fontSize" class="w-full accent-[#4a3728]"></div>
+                                </div>
                             </div>
                         </section>
+
                         <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
                             <h4 class="font-bold text-xs mb-4 flex items-center gap-2"><i class="fa-solid fa-font"></i> 字体库</h4>
                             <div class="space-y-4">
@@ -506,10 +510,10 @@
                 </div>
             </transition>
 
-            <!-- 弹窗 -->
+            <!-- 弹窗：修正位置为全平台居中 -->
             <transition name="fade">
-                <div v-if="modal.show" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <div class="bg-[#fefaf0] w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 paper-texture max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                    <div class="bg-[#fefaf0] w-full max-w-md rounded-3xl p-6 paper-texture max-h-[90vh] overflow-y-auto shadow-2xl">
                         <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-base tracking-widest">{{ modal.title }}</h3><button @click="modal.show = false" class="opacity-30 p-2"><i class="fa-solid fa-xmark"></i></button></div>
 
                         <!-- 角色编辑 -->
@@ -539,7 +543,7 @@
                             <button @click="saveTimeline" class="w-full bg-[#4a3728] text-white py-3 rounded-2xl font-bold mt-4 btn-active">整体封存</button>
                         </div>
 
-                        <!-- 纪年项详情与编辑 (修改Bug：精准修改而非新增) -->
+                        <!-- 纪年项详情与编辑 -->
                         <div v-if="modal.type === 'viewTimelineDetail'" class="space-y-6">
                             <div v-if="!modal.isEditing">
                                 <div class="flex justify-between items-start border-b border-black/10 pb-3 mb-4">
@@ -606,6 +610,12 @@
                 const bgmPlayer = ref(null);
                 const isLocked = ref(false);
                 const pinInput = ref(['', '', '', '']);
+                const defaultAvatar = 'https://s3plus.meituan.net/opapisdk/op_ticket_1_885190757_1769686397698_qdqqd_mxnith.png';
+
+                // 工坊 UI 状态
+                const workshopUi = reactive({
+                    showParams: false
+                });
 
                 const defaultStationery = { bg: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?q=80&w=1000&auto=format&fit=crop', pTop: 40, pBottom: 40, pLeft: 30, pRight: 30, fontSize: 18, textColor: '#4a3728', fontFamily: "'Zhi Mang Xing', cursive" };
                 const initialSettings = JSON.parse(localStorage.getItem('lyhx_settings')) || {};
@@ -622,7 +632,24 @@
                 const addCustomFont = () => { if (!fontInput.name || !fontInput.url) return; tempSettings.customFonts.push({ name: fontInput.name, url: fontInput.url }); applyCustomFontsToPage(tempSettings.customFonts); fontInput.name = ''; fontInput.url = ''; };
                 const removeCustomFont = (idx) => { tempSettings.customFonts.splice(idx, 1); applyCustomFontsToPage(tempSettings.customFonts); };
                 const saveSettings = () => { Object.assign(settings, JSON.parse(JSON.stringify(tempSettings))); localStorage.setItem('lyhx_settings', JSON.stringify(settings)); applyCustomFontsToPage(settings.customFonts); alert('配置已封存应用'); goHome(); };
-                const confirmSavePreset = () => { if(!form.presetName) return; tempSettings.stationeryPresets.push({ name: form.presetName, config: JSON.parse(JSON.stringify(tempSettings.stationery)) }); form.presetName = ''; modal.show = false; };
+                
+                // 修改：支持相同名字覆盖内容
+                const confirmSavePreset = () => { 
+                    if(!form.presetName) return; 
+                    const existingIdx = tempSettings.stationeryPresets.findIndex(p => p.name === form.presetName);
+                    const presetData = { name: form.presetName, config: JSON.parse(JSON.stringify(tempSettings.stationery)) };
+                    
+                    if (existingIdx !== -1) {
+                        tempSettings.stationeryPresets[existingIdx] = presetData;
+                        alert('已覆盖原有预设');
+                    } else {
+                        tempSettings.stationeryPresets.push(presetData);
+                    }
+                    
+                    form.presetName = ''; 
+                    modal.show = false; 
+                };
+
                 const loadPreset = (preset) => { tempSettings.stationery = JSON.parse(JSON.stringify(preset.config)); };
                 const applyToTab = (preset, type) => { if (type === 'sentiments') { tempSettings.sentimentsConfig = JSON.parse(JSON.stringify(preset.config)); tempSettings.sentimentsPresetName = preset.name; } else { tempSettings.echoesConfig = JSON.parse(JSON.stringify(preset.config)); tempSettings.echoesPresetName = preset.name; } alert(`已设为${type === 'sentiments' ? '寄思' : '回响'}背景`); };
                 const removePreset = (idx) => { tempSettings.stationeryPresets.splice(idx, 1); };
@@ -663,7 +690,6 @@
                     const charId = currentCharacter.value.id; 
                     if (!letters.value[charId]) letters.value[charId] = { sentiments: [], echoes: [] }; 
                     const list = letters.value[charId][currentTab.value]; 
-                    // 有且仅能有一封信，始终覆盖第一项
                     list[0] = { ...form.letter };
                     modal.show = false; 
                 };
@@ -680,8 +706,8 @@
                 const viewTimelineDetail = (item, index) => {
                     modal.type = 'viewTimelineDetail';
                     modal.title = '纪年详情';
-                    modal.data = JSON.parse(JSON.stringify(item)); // 深拷贝防止即时篡改
-                    modal.data._original_index = index; // 记录在 parsedTimeline 中的位置
+                    modal.data = JSON.parse(JSON.stringify(item)); 
+                    modal.data._original_index = index; 
                     modal.show = true;
                 };
 
@@ -712,23 +738,15 @@
                     modal.show = false;
                 };
 
-                // 修复：精准修改 Bug，不再添加新条目
                 const saveSingleEventFromView = () => {
                     const editedItem = modal.data;
-                    // 获取当前展开的所有条目（包括 stage）
                     let fullList = [...parsedTimeline.value];
-                    
-                    // 找到在原始数组中的位置进行替换
-                    // 由于 parsedTimeline 包含 stage 标识，我们需要找到对应 index
                     fullList[editedItem._original_index] = { ...editedItem, type: 'event' };
-                    
-                    // 过滤出纯 event 数据用于 rebuild
                     const pureEvents = fullList.filter(item => item.type === 'event');
                     pureEvents.sort((a, b) => parseDateForSort(a.date) - parseDateForSort(b.date));
-                    
                     currentCharacter.value.timelineRaw = rebuildTimelineRaw(pureEvents);
                     modal.isEditing = false;
-                    modal.show = false; // 存志后自动关闭
+                    modal.show = false; 
                 };
 
                 const parsedTimeline = computed(() => {
@@ -785,7 +803,7 @@
 
                 return {
                     currentPage, currentTab, characters, currentCharacter, settings, tempSettings, fontInput, themeOptions,
-                    tabNameMap, modal, form, isMusicPlaying, bgmPlayer, isLocked, pinInput, currentLetterIdx,
+                    tabNameMap, modal, form, isMusicPlaying, bgmPlayer, isLocked, pinInput, currentLetterIdx, defaultAvatar, workshopUi,
                     goHome, calculateDays, selectCharacter, openModal, saveCharacter, confirmDeleteCharacter, enterWorkshop, saveSettings,
                     addCustomFont, removeCustomFont, confirmSavePreset, loadPreset, applyToTab, removePreset,
                     getLetters, getCurrentLetter, saveLetter, editCurrentLetter, saveTimeline, saveSingleEvent, viewTimelineDetail, saveSingleEventFromView,
