@@ -232,7 +232,6 @@
             width: 34px;
             height: 34px;
             border-radius: 50%;
-            background: #4a3728;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -447,7 +446,6 @@
 
                         <!-- 羁绊纪年 -->
                         <div v-if="currentTab === 'chronicles'" class="relative pl-5 pr-2 py-4 transition-all">
-                            <!-- 垂直时间线轴 -->
                             <div class="absolute left-6 top-0 bottom-0 w-px" :style="{ background: 'linear-gradient(to bottom, transparent, ' + settings.theme.textColor + '44, transparent)' }"></div>
                             
                             <div class="flex justify-between items-center mb-10">
@@ -469,20 +467,16 @@
                                         </span>
                                     </div>
                                     <div v-else @click="viewTimelineDetail(item, i)" class="relative pl-10 cursor-pointer">
-                                        <!-- 时间节点标志：重要事件拥有火漆印 -->
                                         <div class="absolute left-[-1px] top-1.5 w-3 h-3 rounded-full border-2 transition-transform group-hover:scale-125 z-10" :style="{ borderColor: item.isImportant ? '#8b0000' : settings.theme.textColor, backgroundColor: settings.theme.bgColor }">
                                             <div v-if="item.isImportant" class="wax-seal"></div>
                                         </div>
                                         
-                                        <!-- 仪式感排版：重要事件文字变红 -->
                                         <div :class="['bg-white/40 p-4 rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-all group-hover:bg-white/60 flex gap-4', item.isImportant ? 'important-event-node' : '']">
                                             <div class="flex-1 min-w-0">
                                                 <div class="mb-1">
-                                                    <!-- 日期设为暗红色 -->
                                                     <span class="text-[9px] font-bold opacity-40 block uppercase tracking-tighter" :style="{ color: item.isImportant ? '#8b0000' : settings.theme.textColor }">
                                                         <i v-if="item.isImportant" class="fa-solid fa-stamp mr-1 scale-75"></i>{{ item.date }}
                                                     </span>
-                                                    <!-- 标题文字，羽毛笔紧随其后 -->
                                                     <div class="flex items-center gap-2">
                                                         <h4 class="text-[12px] font-bold tracking-tight group-hover:text-black" :style="{ color: item.isImportant ? '#8b0000' : '' }">
                                                             {{ item.event }}
@@ -736,19 +730,16 @@
                                         <h4 class="text-xl font-bold" :style="{ color: modal.data.isImportant ? '#8b0000' : settings.theme.textColor }">{{ modal.data.event }}</h4>
                                     </div>
                                     <div class="flex gap-2">
-                                        <!-- 删除按钮 (新增) -->
                                         <button @click="deleteSingleEvent(modal.data)" 
                                                 class="text-[10px] border px-3 py-1 rounded-full opacity-40 hover:opacity-100 flex-shrink-0 transition-all flex items-center justify-center min-w-[40px] text-red-900" 
                                                 :style="{ borderColor: settings.theme.textColor }">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
-                                        <!-- 重要标记按钮 -->
                                         <button @click="toggleImportant(modal.data)" 
                                                 class="text-[10px] border px-3 py-1 rounded-full opacity-60 hover:opacity-100 flex-shrink-0 transition-all flex items-center justify-center min-w-[40px]" 
                                                 :style="{ borderColor: settings.theme.textColor }">
                                             <i :class="['fa-solid fa-stamp', modal.data.isImportant ? 'text-[#8b0000] scale-110' : 'opacity-20']"></i>
                                         </button>
-                                        <!-- 修笔按钮 -->
                                         <button @click="modal.isEditing = true" class="text-[10px] border px-3 py-1 rounded-full opacity-60 hover:opacity-100 flex-shrink-0 transition-all" :style="{ borderColor: settings.theme.textColor }">修笔</button>
                                     </div>
                                 </div>
@@ -883,14 +874,14 @@
                 const applyStationeryToChar = (config) => {
                     const field = currentTab.value + 'Config';
                     if (!config) delete currentCharacter.value[field];
-                    else currentCharacter.value[field] = JSON.stringify(config);
+                    else currentCharacter.value[field] = JSON.parse(JSON.stringify(config)); // 存储为 Object
                     modal.show = false;
                 };
 
                 const isStationeryActive = (config) => {
-                    const activeStr = currentCharacter.value[currentTab.value + 'Config'];
-                    if(!activeStr) return false;
-                    const active = JSON.parse(activeStr);
+                    const active = currentCharacter.value[currentTab.value + 'Config'];
+                    if(!active) return false;
+                    // 由于存储的是对象，直接对比
                     return active.bg === config.bg && active.textColor === config.textColor;
                 };
 
@@ -950,27 +941,20 @@
                     return out;
                 };
 
-                // 修改：核心日期排序逻辑增强
+                // 核心日期排序逻辑增强
                 const parseDateForSort = (str) => {
                     if (!str) return 0;
-                    // 标准化：将 年, 月, 日, ., / 统一替换为 -，并去除空格
                     let normalized = str.replace(/[年月./]/g, '-').replace(/日/g, '').replace(/\s+/g, '');
                     let parts = normalized.split('-').filter(s => s);
-                    
                     try {
-                        // 逻辑：如果是 YYYY-MM-DD 或 MM-DD
                         if (parts.length === 3) {
                             let y = parts[0], m = parts[1], d = parts[2];
-                            // 关键点：补齐二位数字，防止 11月 在 4月 之前
-                            m = m.padStart(2, '0');
-                            d = d.padStart(2, '0');
+                            m = m.padStart(2, '0'); d = d.padStart(2, '0');
                             const dateObj = new Date(`${y}-${m}-${d}`);
                             return isNaN(dateObj.getTime()) ? 0 : dateObj.getTime();
                         } else if (parts.length === 2) {
-                            // 无年份时，假定为 2000 年进行相对排序
                             let m = parts[0], d = parts[1];
-                            m = m.padStart(2, '0');
-                            d = d.padStart(2, '0');
+                            m = m.padStart(2, '0'); d = d.padStart(2, '0');
                             const dateObj = new Date(`2000-${m}-${d}`);
                             return isNaN(dateObj.getTime()) ? 0 : dateObj.getTime();
                         }
@@ -997,7 +981,6 @@
                         }
                     });
 
-                    // 排序
                     newEvents.sort((a, b) => parseDateForSort(a.date) - parseDateForSort(b.date));
                     syncEventsToRaw(newEvents);
                     modal.show = false;
@@ -1019,9 +1002,9 @@
                 const deleteSingleEvent = (item) => {
                     if (confirm('确认抹去这段时光记述？此操作不可撤销。')) {
                         let fullList = [...parsedTimeline.value];
+                        // 找到该条目在当前计算结果中的位置并删除
                         fullList.splice(item._original_index, 1);
                         const pureEvents = fullList.filter(item => item.type === 'event');
-                        // 重新排序并同步
                         pureEvents.sort((a, b) => parseDateForSort(a.date) - parseDateForSort(b.date));
                         syncEventsToRaw(pureEvents);
                         modal.show = false;
@@ -1085,17 +1068,31 @@
                 const toggleMusic = () => { if (!bgmPlayer.value) return; if (isMusicPlaying.value) bgmPlayer.value.pause(); else bgmPlayer.value.play().catch(() => { isMusicPlaying.value = false; }); isMusicPlaying.value = !isMusicPlaying.value; };
                 const exportLetterImage = () => { const area = document.getElementById('letter-canvas'); html2canvas(area, { useCORS: true, scale: 2 }).then(canvas => { const link = document.createElement('a'); link.download = `流年书信-${getCurrentLetter().title}.png`; link.href = canvas.toDataURL(); link.click(); }); };
                 const exportData = () => { const outSettings = currentPage.value === 'workshop' ? tempSettings : settings; const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: outSettings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
-                const importData = (e) => { const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); characters.value = data.characters || []; letters.value = data.letters || {}; Object.assign(settings, data.settings); if (currentPage.value === 'workshop') Object.assign(tempSettings, JSON.parse(JSON.stringify(data.settings))); applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); } catch (err) { alert('导入失败，请检查文件格式。'); } }; reader.readAsText(e.target.files[0]); };
-
-                const handlePinInput = (i, e) => { if (e.target.value && i < 3) e.target.nextElementSibling.focus(); };
-                const checkPin = () => { if (pinInput.value.join('') === settings.privacy.pin) isLocked.value = false; else { alert('钥纹错误'); pinInput.value = ['', '', '', '']; } };
+                
+                const importData = (e) => { 
+                    const reader = new FileReader(); reader.onload = (ev) => { 
+                        try { 
+                            const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); 
+                            characters.value = data.characters || []; letters.value = data.letters || {}; 
+                            Object.assign(settings, data.settings); if (currentPage.value === 'workshop') Object.assign(tempSettings, JSON.parse(JSON.stringify(data.settings)));
+                            applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); 
+                        } catch (err) { alert('导入失败，请检查文件格式。'); } 
+                    }; reader.readAsText(e.target.files[0]); 
+                };
 
                 const RingThemeClass = (color) => { const activeColor = currentPage.value === 'workshop' ? tempSettings.theme.bgColor : settings.theme.bgColor; return activeColor === color ? 'ring-2 ring-black/20 ring-offset-2' : ''; };
                 const tabNameMap = { imprint: '旧影', sentiments: '寄思', echoes: '回响', chronicles: '纪年' };
                 
                 const getActiveLetterConfig = () => {
-                    const charConfigStr = currentCharacter.value[currentTab.value + 'Config'];
-                    return charConfigStr ? JSON.parse(charConfigStr) : settings.stationery;
+                    const charConfig = currentCharacter.value[currentTab.value + 'Config'];
+                    // 核心修复：增加类型判断，防止 JSON.parse 报错
+                    if (charConfig) {
+                        if (typeof charConfig === 'string') {
+                            try { return JSON.parse(charConfig); } catch(e) { return settings.stationery; }
+                        }
+                        return charConfig;
+                    }
+                    return settings.stationery;
                 };
 
                 const getLetterStyle = computed(() => ({ backgroundImage: `url(${getActiveLetterConfig().bg})` }));
@@ -1112,8 +1109,8 @@
                     goHome, calculateDays, selectCharacter, openModal, saveCharacter, confirmDeleteCharacter, enterWorkshop, saveSettings,
                     addCustomFont, removeCustomFont, confirmSavePreset, confirmSaveThemePreset, loadPreset, loadThemePreset, removePreset, removeThemePreset,
                     getLetters, getCurrentLetter, saveLetter, saveTimeline, saveSingleEvent, viewTimelineDetail, saveSingleEventFromView, toggleImportant, deleteSingleEvent,
-                    toggleMusic, exportLetterImage, exportData, importData, handlePinInput, checkPin,
-                    parsedTimeline, getLetterStyle, getPaddingStyle, getLetterPreviewStyle, getPaddingPreviewStyle, getLetterFontPreviewStyle, getActiveLetterConfig, RingThemeClass, handleImgError, isMusicPlaying, bgmPlayer, isLocked, pinInput,
+                    toggleMusic, exportLetterImage, exportData, importData,
+                    parsedTimeline, getLetterStyle, getPaddingStyle, getLetterPreviewStyle, getPaddingPreviewStyle, getLetterFontPreviewStyle, getActiveLetterConfig, RingThemeClass, handleImgError, isMusicPlaying, bgmPlayer, isLocked: false,
                     openStationeryPicker, applyStationeryToChar, isStationeryActive
                 };
             }
