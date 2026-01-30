@@ -293,19 +293,6 @@
 </head>
 <body class="min-h-screen" :style="{ backgroundColor: settings.theme.bgColor, fontFamily: settings.theme.globalFont }">
     <div id="app" v-cloak>
-        <!-- 隐私锁屏 -->
-        <transition name="fade">
-            <div v-if="isLocked" class="fixed inset-0 z-[100] bg-[#f4ead5] flex flex-col items-center justify-center p-8 text-center paper-texture">
-                <h2 class="text-3xl font-bold mb-8 tracking-widest">流年函匣</h2>
-                <div class="flex gap-4 mb-8">
-                    <input v-for="n in 4" :key="n" type="password" maxlength="1" 
-                           class="w-12 h-16 text-center text-2xl border-b-2 border-[#4a3728] bg-transparent outline-none"
-                           v-model="pinInput[n-1]" @input="handlePinInput(n-1, $event)">
-                </div>
-                <button @click="checkPin" class="px-10 py-3 border border-[#4a3728] rounded-full btn-active uppercase text-xs tracking-widest">解封</button>
-            </div>
-        </transition>
-
         <!-- 主内容区 -->
         <main class="max-w-md mx-auto min-h-screen pb-12 relative shadow-2xl transition-all" 
               :style="{ backgroundColor: settings.theme.bgColor + 'CC', fontFamily: settings.theme.globalFont, color: settings.theme.textColor }">
@@ -458,7 +445,8 @@
                         </div>
 
                         <!-- 羁绊纪年 -->
-                        <div v-if="currentTab === 'chronicles'" class="relative pl-6 pr-2 py-4">
+                        <div v-if="currentTab === 'chronicles'" class="relative pl-5 pr-2 py-4 transition-all">
+                            <!-- 垂直时间线轴 -->
                             <div class="absolute left-6 top-0 bottom-0 w-px" :style="{ background: 'linear-gradient(to bottom, transparent, ' + settings.theme.textColor + '44, transparent)' }"></div>
                             
                             <div class="flex justify-between items-center mb-10">
@@ -485,24 +473,21 @@
                                             <div v-if="item.isImportant" class="wax-seal"></div>
                                         </div>
                                         
-                                        <!-- 仪式感排版：重要事件文字变红 -->
                                         <div :class="['bg-white/40 p-4 rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-all group-hover:bg-white/60 flex gap-4', item.isImportant ? 'important-event-node' : '']">
                                             <div class="flex-1 min-w-0">
                                                 <div class="mb-1">
-                                                    <!-- 日期设为暗红色 -->
                                                     <span class="text-[9px] font-bold opacity-40 block uppercase tracking-tighter" :style="{ color: item.isImportant ? '#8b0000' : settings.theme.textColor }">
                                                         <i v-if="item.isImportant" class="fa-solid fa-stamp mr-1 scale-75"></i>{{ item.date }}
                                                     </span>
-                                                    <!-- 标题设为暗红色 -->
-                                                    <h4 class="text-[12px] font-bold tracking-tight group-hover:text-black" :style="{ color: item.isImportant ? '#8b0000' : '' }">
-                                                        {{ item.event }}
-                                                    </h4>
+                                                    <!-- 羽毛笔图标位置：紧随标题之后 -->
+                                                    <div class="flex items-center gap-2">
+                                                        <h4 class="text-[12px] font-bold tracking-tight group-hover:text-black" :style="{ color: item.isImportant ? '#8b0000' : '' }">
+                                                            {{ item.event }}
+                                                        </h4>
+                                                        <i v-if="item.fullDesc" class="fa-solid fa-feather-pointed text-[9px] opacity-30"></i>
+                                                    </div>
                                                 </div>
                                                 <p class="text-[11px] opacity-60 leading-relaxed italic">{{ item.desc }}</p>
-                                                
-                                                <div v-if="item.fullDesc" class="mt-2 opacity-30">
-                                                    <i class="fa-solid fa-feather-pointed text-[9px]"></i>
-                                                </div>
                                             </div>
 
                                             <div v-if="item.imgUrl" class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-black/5 shadow-inner bg-black/5">
@@ -748,10 +733,10 @@
                                         <h4 class="text-xl font-bold" :style="{ color: modal.data.isImportant ? '#8b0000' : settings.theme.textColor }">{{ modal.data.event }}</h4>
                                     </div>
                                     <div class="flex gap-2">
-                                        <!-- 修改：优化标记重要按钮，点击前显示虚影，点击后显示红色实体 -->
                                         <button @click="toggleImportant(modal.data)" 
                                                 class="text-[10px] border px-3 py-1 rounded-full opacity-60 hover:opacity-100 flex-shrink-0 transition-all flex items-center justify-center min-w-[40px]" 
                                                 :style="{ borderColor: settings.theme.textColor }">
+                                            <!-- 修改：按钮图标一致性优化，使用实体图标配合不透明度 -->
                                             <i :class="[
                                                 'fa-solid fa-stamp',
                                                 modal.data.isImportant ? 'text-[#8b0000] scale-110' : 'opacity-20'
@@ -1081,7 +1066,7 @@
                 const getPaddingPreviewStyle = computed(() => ({ padding: `40px ${tempSettings.stationery?.pSide}px 40px ${tempSettings.stationery?.pSide}px` }));
                 const getLetterFontPreviewStyle = computed(() => ({ fontSize: tempSettings.stationery?.fontSize + 'px', color: tempSettings.stationery?.textColor, fontFamily: tempSettings.stationery?.fontFamily }));
 
-                onMounted(() => { if (settings.privacy.enabled && settings.privacy.pin) isLocked.value = true; applyCustomFontsToPage(settings.customFonts || []); });
+                onMounted(() => { applyCustomFontsToPage(settings.customFonts || []); });
 
                 return {
                     currentPage, currentTab, characters, currentCharacter, settings, tempSettings, fontInput, themeOptions, themePresets,
