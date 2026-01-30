@@ -145,6 +145,13 @@
         .letter-content strong { font-weight: 700; opacity: 1; }
         .letter-content em { font-style: italic; opacity: 0.9; }
 
+        /* 对话内容特殊样式 */
+        .dialogue-content {
+            font-style: italic;
+            opacity: 0.8;
+            filter: brightness(1.1);
+        }
+
         .preview-container {
             width: 100%;
             height: 420px; 
@@ -443,7 +450,6 @@
                                         <div class="relative z-10" :style="getPaddingStyle">
                                             <div class="flex justify-between items-start mb-6"><h2 class="text-xl font-bold border-b border-black/10 pb-2 flex-1" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().title }}</h2></div>
                                             <p class="text-[10px] opacity-40 mb-6 italic" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().date }}</p>
-                                            <!-- 修改：书信内容渲染逻辑，支持样式 -->
                                             <div class="letter-content whitespace-pre-wrap leading-relaxed" 
                                                  :style="{fontSize: getActiveLetterConfig().fontSize + 'px', color: getActiveLetterConfig().textColor, fontFamily: getActiveLetterConfig().fontFamily}"
                                                  v-html="renderMarkdown(getCurrentLetter().content)">
@@ -533,10 +539,9 @@
                                     <div class="preview-container">
                                         <div class="letter-display preview-mini" :style="getLetterPreviewStyle">
                                             <div class="relative z-10" :style="getPaddingPreviewStyle">
-                                                <!-- 修改：预览处也应用样式解析 -->
                                                 <div class="letter-content leading-relaxed" 
                                                      :style="getLetterFontPreviewStyle"
-                                                     v-html="renderMarkdown('我爱你。\n我讨厌距离、阴影、痛苦、下雨。\n我想要明亮的日子，和你一起，靠着大海和沙滩……\n---\n可是我在等你，身无片甲，赤手空拳。')">
+                                                     v-html="renderMarkdown('我爱你。\n“我讨厌距离、阴影、痛苦、下雨。”\n我想要明亮的日子，和你一起，靠着大海和沙滩……\n---\n可是我在等你，身无片甲，赤手空拳。')">
                                                 </div>
                                             </div>
                                         </div>
@@ -758,7 +763,6 @@
                                 <div v-if="modal.data.imgUrl" class="mb-5 rounded-2xl overflow-hidden shadow-lg border-4 border-white bg-black/5">
                                     <img :src="modal.data.imgUrl" referrerpolicy="no-referrer" class="w-full h-auto max-h-72 object-cover" @error="handleImgError">
                                 </div>
-                                <!-- 修改：此处调用样式渲染函数 -->
                                 <div class="letter-content leading-relaxed text-[13px] opacity-80 font-serif-sc"
                                      v-html="renderMarkdown(modal.data.fullDesc || modal.data.desc)">
                                 </div>
@@ -897,16 +901,15 @@
                     return active.bg === config.bg && active.textColor === config.textColor;
                 };
 
-                // 修改：核心排版样式解析引擎
+                // 修改：核心排版样式解析引擎，增加对话识别
                 const renderMarkdown = (text) => {
                     if (!text) return "";
-                    // 1. 处理换行分割
                     let paragraphs = text.split('\n');
                     let htmlResult = "";
 
                     paragraphs.forEach(line => {
                         let trimmed = line.trim();
-                        // 2. 处理美化分隔线
+                        // 处理分隔线
                         if (trimmed === '---') {
                             htmlResult += '<hr>';
                             return;
@@ -917,13 +920,14 @@
                             return;
                         }
 
-                        // 3. 处理样式标记
-                        // 加粗 **
+                        // 处理对话样式：识别中英文双引号内容，应用斜体与柔和调色
+                        line = line.replace(/([“"])(.*?)([”"])/g, '<span class="dialogue-content">$1$2$3</span>');
+
+                        // 处理加粗 **
                         line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                        // 斜体 *
+                        // 处理斜体 *
                         line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-                        // 4. 封装进段落，利用 CSS 控制缩进和间距
                         htmlResult += `<p>${line}</p>`;
                     });
 
@@ -954,9 +958,16 @@
                     modal.type = type; modal.show = true; modal.isEditing = false;
                     if (type === 'addCharacter') { modal.title = '建立新缘分'; form.char = { name: '', nickname: '', tags: '', startDate: '', avatar: '', motto: '', bgmUrl: '' }; }
                     else if (type === 'editCharacter') { modal.title = '修缮印记'; form.char = { ...currentCharacter.value }; if (Array.isArray(form.char.tags)) form.char.tags = form.char.tags.join(','); }
-                    else if (type === 'addLetter') { modal.title = '落笔成书'; const existing = getLetters()[0]; if (existing) form.letter = { ...existing }; else form.letter = { title: '', date: new Date().toISOString().split('T')[0], content: '' }; }
+                    else if (type === 'addLetter') { 
+                        modal.title = '落笔成书'; const existing = getLetters()[0];
+                        if (existing) form.letter = { ...existing }; 
+                        else form.letter = { title: '', date: new Date().toISOString().split('T')[0], content: '' }; 
+                    }
                     else if (type === 'editLetter') { modal.title = '重写锦书'; form.letter = { ...data }; }
-                    else if (type === 'editTimeline') { modal.title = '整体编辑岁序'; form.timeline = rebuildTimelineBasics(parsedTimeline.value); }
+                    else if (type === 'editTimeline') { 
+                        modal.title = '整体编辑岁序'; 
+                        form.timeline = rebuildTimelineBasics(parsedTimeline.value); 
+                    }
                     else if (type === 'addTimelineEvent') { modal.title = '添笔新纪'; form.event = { category: '', date: '', title: '', desc: '', fullDesc: '', imgUrl: '' }; }
                     else if (type === 'savePreset') { modal.title = '封存当前装潢至库'; }
                     else if (type === 'saveThemePreset') { modal.title = '封存当前界面方案'; }
@@ -1104,7 +1115,17 @@
                 const toggleMusic = () => { if (!bgmPlayer.value) return; if (isMusicPlaying.value) bgmPlayer.value.pause(); else bgmPlayer.value.play().catch(() => { isMusicPlaying.value = false; }); isMusicPlaying.value = !isMusicPlaying.value; };
                 const exportLetterImage = () => { const area = document.getElementById('letter-canvas'); html2canvas(area, { useCORS: true, scale: 2 }).then(canvas => { const link = document.createElement('a'); link.download = `流年书信-${getCurrentLetter().title}.png`; link.href = canvas.toDataURL(); link.click(); }); };
                 const exportData = () => { const outSettings = currentPage.value === 'workshop' ? tempSettings : settings; const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: outSettings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
-                const importData = (e) => { const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); characters.value = data.characters || []; letters.value = data.letters || {}; Object.assign(settings, data.settings); if (currentPage.value === 'workshop') Object.assign(tempSettings, JSON.parse(JSON.stringify(data.settings))); applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); } catch (err) { alert('导入失败，请检查文件格式。'); } }; reader.readAsText(e.target.files[0]); };
+                
+                const importData = (e) => { 
+                    const reader = new FileReader(); reader.onload = (ev) => { 
+                        try { 
+                            const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); 
+                            characters.value = data.characters || []; letters.value = data.letters || {}; 
+                            Object.assign(settings, data.settings); if (currentPage.value === 'workshop') Object.assign(tempSettings, JSON.parse(JSON.stringify(data.settings)));
+                            applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); 
+                        } catch (err) { alert('导入失败，请检查文件格式。'); } 
+                    }; reader.readAsText(e.target.files[0]); 
+                };
 
                 const RingThemeClass = (color) => { const activeColor = currentPage.value === 'workshop' ? tempSettings.theme.bgColor : settings.theme.bgColor; return activeColor === color ? 'ring-2 ring-black/20 ring-offset-2' : ''; };
                 const tabNameMap = { imprint: '旧影', sentiments: '寄思', echoes: '回响', chronicles: '纪年' };
