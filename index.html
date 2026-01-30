@@ -232,6 +232,7 @@
             width: 34px;
             height: 34px;
             border-radius: 50%;
+            background: #4a3728;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -473,13 +474,15 @@
                                             <div v-if="item.isImportant" class="wax-seal"></div>
                                         </div>
                                         
+                                        <!-- 仪式感排版：重要事件文字变红 -->
                                         <div :class="['bg-white/40 p-4 rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-all group-hover:bg-white/60 flex gap-4', item.isImportant ? 'important-event-node' : '']">
                                             <div class="flex-1 min-w-0">
                                                 <div class="mb-1">
+                                                    <!-- 日期设为暗红色 -->
                                                     <span class="text-[9px] font-bold opacity-40 block uppercase tracking-tighter" :style="{ color: item.isImportant ? '#8b0000' : settings.theme.textColor }">
                                                         <i v-if="item.isImportant" class="fa-solid fa-stamp mr-1 scale-75"></i>{{ item.date }}
                                                     </span>
-                                                    <!-- 羽毛笔图标位置：紧随标题之后 -->
+                                                    <!-- 标题文字，羽毛笔紧随其后 -->
                                                     <div class="flex items-center gap-2">
                                                         <h4 class="text-[12px] font-bold tracking-tight group-hover:text-black" :style="{ color: item.isImportant ? '#8b0000' : '' }">
                                                             {{ item.event }}
@@ -733,15 +736,19 @@
                                         <h4 class="text-xl font-bold" :style="{ color: modal.data.isImportant ? '#8b0000' : settings.theme.textColor }">{{ modal.data.event }}</h4>
                                     </div>
                                     <div class="flex gap-2">
+                                        <!-- 删除按钮 (新增) -->
+                                        <button @click="deleteSingleEvent(modal.data)" 
+                                                class="text-[10px] border px-3 py-1 rounded-full opacity-40 hover:opacity-100 flex-shrink-0 transition-all flex items-center justify-center min-w-[40px] text-red-900" 
+                                                :style="{ borderColor: settings.theme.textColor }">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                        <!-- 重要标记按钮 -->
                                         <button @click="toggleImportant(modal.data)" 
                                                 class="text-[10px] border px-3 py-1 rounded-full opacity-60 hover:opacity-100 flex-shrink-0 transition-all flex items-center justify-center min-w-[40px]" 
                                                 :style="{ borderColor: settings.theme.textColor }">
-                                            <!-- 修改：按钮图标一致性优化，使用实体图标配合不透明度 -->
-                                            <i :class="[
-                                                'fa-solid fa-stamp',
-                                                modal.data.isImportant ? 'text-[#8b0000] scale-110' : 'opacity-20'
-                                            ]"></i>
+                                            <i :class="['fa-solid fa-stamp', modal.data.isImportant ? 'text-[#8b0000] scale-110' : 'opacity-20']"></i>
                                         </button>
+                                        <!-- 修笔按钮 -->
                                         <button @click="modal.isEditing = true" class="text-[10px] border px-3 py-1 rounded-full opacity-60 hover:opacity-100 flex-shrink-0 transition-all" :style="{ borderColor: settings.theme.textColor }">修笔</button>
                                     </div>
                                 </div>
@@ -943,6 +950,34 @@
                     return out;
                 };
 
+                // 修改：核心日期排序逻辑增强
+                const parseDateForSort = (str) => {
+                    if (!str) return 0;
+                    // 标准化：将 年, 月, 日, ., / 统一替换为 -，并去除空格
+                    let normalized = str.replace(/[年月./]/g, '-').replace(/日/g, '').replace(/\s+/g, '');
+                    let parts = normalized.split('-').filter(s => s);
+                    
+                    try {
+                        // 逻辑：如果是 YYYY-MM-DD 或 MM-DD
+                        if (parts.length === 3) {
+                            let y = parts[0], m = parts[1], d = parts[2];
+                            // 关键点：补齐二位数字，防止 11月 在 4月 之前
+                            m = m.padStart(2, '0');
+                            d = d.padStart(2, '0');
+                            const dateObj = new Date(`${y}-${m}-${d}`);
+                            return isNaN(dateObj.getTime()) ? 0 : dateObj.getTime();
+                        } else if (parts.length === 2) {
+                            // 无年份时，假定为 2000 年进行相对排序
+                            let m = parts[0], d = parts[1];
+                            m = m.padStart(2, '0');
+                            d = d.padStart(2, '0');
+                            const dateObj = new Date(`2000-${m}-${d}`);
+                            return isNaN(dateObj.getTime()) ? 0 : dateObj.getTime();
+                        }
+                    } catch (e) { return 0; }
+                    return 0;
+                };
+
                 const saveTimeline = () => {
                     const oldEvents = [...parsedTimeline.value].filter(e => e.type === 'event');
                     const lines = form.timeline.split('\n');
@@ -962,21 +997,12 @@
                         }
                     });
 
-                    let finalRaw = "";
-                    let lastCat = "";
-                    newEvents.forEach(ev => {
-                        if (ev.category && ev.category !== lastCat) { finalRaw += `# ${ev.category}\n`; lastCat = ev.category; }
-                        const prefix = ev.isImportant ? '*' : '';
-                        finalRaw += `${prefix}${ev.date}-${ev.event}-${ev.desc}\n`;
-                        if (ev.fullDesc) finalRaw += `详细描述：[\n${ev.fullDesc}\n]\n`;
-                        if (ev.imgUrl) finalRaw += `图片：${ev.imgUrl}\n`;
-                    });
-                    currentCharacter.value.timelineRaw = finalRaw;
+                    // 排序
+                    newEvents.sort((a, b) => parseDateForSort(a.date) - parseDateForSort(b.date));
+                    syncEventsToRaw(newEvents);
                     modal.show = false;
                 };
 
-                const parseDateForSort = (str) => { if (!str) return 0; const clean = str.replace(/[年月日]/g, '-').replace(/\.$/, '').replace(/\./g, '-'); const d = new Date(clean); return isNaN(d.getTime()) ? 0 : d.getTime(); };
-                
                 const viewTimelineDetail = (item, index) => { 
                     modal.type = 'viewTimelineDetail'; 
                     modal.title = '纪年详情'; 
@@ -988,6 +1014,18 @@
                 const toggleImportant = (item) => {
                     item.isImportant = !item.isImportant;
                     saveSingleEventFromView(); 
+                };
+
+                const deleteSingleEvent = (item) => {
+                    if (confirm('确认抹去这段时光记述？此操作不可撤销。')) {
+                        let fullList = [...parsedTimeline.value];
+                        fullList.splice(item._original_index, 1);
+                        const pureEvents = fullList.filter(item => item.type === 'event');
+                        // 重新排序并同步
+                        pureEvents.sort((a, b) => parseDateForSort(a.date) - parseDateForSort(b.date));
+                        syncEventsToRaw(pureEvents);
+                        modal.show = false;
+                    }
                 };
 
                 const saveSingleEvent = () => {
@@ -1073,7 +1111,7 @@
                     tabNameMap, modal, form, currentLetterIdx, defaultAvatar, workshopUi,
                     goHome, calculateDays, selectCharacter, openModal, saveCharacter, confirmDeleteCharacter, enterWorkshop, saveSettings,
                     addCustomFont, removeCustomFont, confirmSavePreset, confirmSaveThemePreset, loadPreset, loadThemePreset, removePreset, removeThemePreset,
-                    getLetters, getCurrentLetter, saveLetter, saveTimeline, saveSingleEvent, viewTimelineDetail, saveSingleEventFromView, toggleImportant,
+                    getLetters, getCurrentLetter, saveLetter, saveTimeline, saveSingleEvent, viewTimelineDetail, saveSingleEventFromView, toggleImportant, deleteSingleEvent,
                     toggleMusic, exportLetterImage, exportData, importData, handlePinInput, checkPin,
                     parsedTimeline, getLetterStyle, getPaddingStyle, getLetterPreviewStyle, getPaddingPreviewStyle, getLetterFontPreviewStyle, getActiveLetterConfig, RingThemeClass, handleImgError, isMusicPlaying, bgmPlayer, isLocked, pinInput,
                     openStationeryPicker, applyStationeryToChar, isStationeryActive
