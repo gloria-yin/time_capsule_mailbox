@@ -768,7 +768,7 @@
                                     <input v-model="modal.data.desc" placeholder="简述" class="vintage-input w-full text-xs">
                                     <input v-model="modal.data.imgUrl" placeholder="插图 URL" class="vintage-input w-full text-xs">
                                     <!-- 修改点：加长编辑框 -->
-                                    <textarea ref="descTextArea" v-model="modal.data.fullDesc" placeholder="详细描述详情故事..." class="vintage-input w-full h-[400px] text-sm leading-loose"></textarea>
+                                    <textarea ref="descTextArea" v-model="modal.data.fullDesc" placeholder="详细描述详情故事..." class="vintage-input w-full h-[300px] text-sm leading-loose"></textarea>
                                     <div class="flex gap-2 pt-2">
                                         <button @click="saveSingleEventFromView" class="flex-1 py-3 rounded-xl btn-active font-bold transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">保存修改</button>
                                         <button @click="modal.isEditing = false" class="px-6 py-3 border border-black/10 rounded-xl opacity-40 text-xs">取消</button>
@@ -1151,3 +1151,4 @@
     </script>
 </body>
 </html>
+
