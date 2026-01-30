@@ -126,10 +126,24 @@
             position: relative;
         }
 
+        /* 统一内容排版规则 */
         .letter-content p {
             margin-bottom: 0.5em;
-            text-indent: 2em; /* 首行缩进2格 */
+            text-indent: 2em;
         }
+
+        /* 分隔线样式 */
+        .letter-content hr {
+            border: none;
+            border-top: 1px dashed rgba(0,0,0,0.15);
+            margin: 1.5rem auto;
+            width: 70%;
+            text-indent: 0; /* 分隔线不缩进 */
+        }
+
+        /* 加粗和斜体修饰 */
+        .letter-content strong { font-weight: 700; opacity: 1; }
+        .letter-content em { font-style: italic; opacity: 0.9; }
 
         .preview-container {
             width: 100%;
@@ -259,14 +273,12 @@
             clip-path: polygon(100% 0, 0 100%, 100% 100%);
         }
 
-        /* 重要事件节点卡片修饰 */
         .important-event-node {
             background: rgba(255, 255, 255, 0.65) !important;
             border: 1.5px solid var(--dark-red) !important;
             box-shadow: 0 2px 8px rgba(139, 0, 0, 0.08);
         }
 
-        /* 火漆印章效果 */
         .wax-seal {
             position: absolute;
             top: -12px;
@@ -283,7 +295,7 @@
             transform: rotate(-10deg);
         }
         .wax-seal::after {
-            content: "\f004"; /* Heart Icon */
+            content: "\f004"; 
             font-family: "Font Awesome 6 Free";
             font-weight: 900;
             color: rgba(255, 255, 255, 0.2);
@@ -431,8 +443,10 @@
                                         <div class="relative z-10" :style="getPaddingStyle">
                                             <div class="flex justify-between items-start mb-6"><h2 class="text-xl font-bold border-b border-black/10 pb-2 flex-1" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().title }}</h2></div>
                                             <p class="text-[10px] opacity-40 mb-6 italic" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().date }}</p>
-                                            <div class="letter-content whitespace-pre-wrap leading-relaxed" :style="{fontSize: getActiveLetterConfig().fontSize + 'px', color: getActiveLetterConfig().textColor, fontFamily: getActiveLetterConfig().fontFamily}">
-                                                <p v-for="(para, pIdx) in (getCurrentLetter().content || '').split('\n')" :key="pIdx">{{ para }}</p>
+                                            <!-- 修改：书信内容渲染逻辑，支持样式 -->
+                                            <div class="letter-content whitespace-pre-wrap leading-relaxed" 
+                                                 :style="{fontSize: getActiveLetterConfig().fontSize + 'px', color: getActiveLetterConfig().textColor, fontFamily: getActiveLetterConfig().fontFamily}"
+                                                 v-html="renderMarkdown(getCurrentLetter().content)">
                                             </div>
                                             <div class="mt-16 text-right opacity-30 text-[9px] tracking-tighter" :style="{color: getActiveLetterConfig().textColor}">—— 载于 流年函匣 ——</div>
                                         </div>
@@ -446,7 +460,7 @@
 
                         <!-- 羁绊纪年 -->
                         <div v-if="currentTab === 'chronicles'" class="relative pl-5 pr-2 py-4 transition-all">
-                            <div class="absolute left-6 top-0 bottom-0 w-px" :style="{ background: 'linear-gradient(to bottom, transparent, ' + settings.theme.textColor + '44, transparent)' }"></div>
+                            <div class="absolute left-5 top-0 bottom-0 w-px" :style="{ background: 'linear-gradient(to bottom, transparent, ' + settings.theme.textColor + '44, transparent)' }"></div>
                             
                             <div class="flex justify-between items-center mb-10">
                                 <span class="text-[10px] opacity-40 font-bold uppercase tracking-widest pl-4">岁序流轴</span>
@@ -519,12 +533,10 @@
                                     <div class="preview-container">
                                         <div class="letter-display preview-mini" :style="getLetterPreviewStyle">
                                             <div class="relative z-10" :style="getPaddingPreviewStyle">
-                                                <div class="letter-content whitespace-pre-wrap leading-relaxed" :style="getLetterFontPreviewStyle">
-                                                    <p>我爱你。</p>
-                                                    <p>我讨厌距离、阴影、痛苦、下雨。</p>
-                                                    <p>我想要明亮的日子，和你一起，靠着大海和沙滩，我想要奇幻的天空，我喜爱的国度，但是要和你在一起，和你在一起……我想要肉体、温度、石头、光滑的水，所有我们可以触摸的东西。</p>
-                                                    <p>我恨做梦，我恨等待……</p>
-                                                    <p>可是我在等你，身无片甲，赤手空拳。</p>
+                                                <!-- 修改：预览处也应用样式解析 -->
+                                                <div class="letter-content leading-relaxed" 
+                                                     :style="getLetterFontPreviewStyle"
+                                                     v-html="renderMarkdown('我爱你。\n我讨厌距离、阴影、痛苦、下雨。\n我想要明亮的日子，和你一起，靠着大海和沙滩……\n---\n可是我在等你，身无片甲，赤手空拳。')">
                                                 </div>
                                             </div>
                                         </div>
@@ -746,8 +758,9 @@
                                 <div v-if="modal.data.imgUrl" class="mb-5 rounded-2xl overflow-hidden shadow-lg border-4 border-white bg-black/5">
                                     <img :src="modal.data.imgUrl" referrerpolicy="no-referrer" class="w-full h-auto max-h-72 object-cover" @error="handleImgError">
                                 </div>
-                                <div class="letter-content leading-relaxed text-[13px] opacity-80 whitespace-pre-wrap font-serif-sc">
-                                    <p v-for="(p, pi) in (modal.data.fullDesc || modal.data.desc || '').split('\n')" :key="pi">{{ p }}</p>
+                                <!-- 修改：此处调用样式渲染函数 -->
+                                <div class="letter-content leading-relaxed text-[13px] opacity-80 font-serif-sc"
+                                     v-html="renderMarkdown(modal.data.fullDesc || modal.data.desc)">
                                 </div>
                             </div>
                             <div v-else class="space-y-4">
@@ -757,7 +770,7 @@
                                 </div>
                                 <input v-model="modal.data.desc" placeholder="简述" class="vintage-input w-full text-xs">
                                 <input v-model="modal.data.imgUrl" placeholder="插图 URL" class="vintage-input w-full text-xs">
-                                <textarea v-model="modal.data.fullDesc" placeholder="详细描述详情故事..." class="vintage-input w-full h-48 text-sm leading-loose"></textarea>
+                                <textarea v-model="modal.data.fullDesc" placeholder="详细描述详情故事... (支持加粗**, 斜体*, 分隔线---)" class="vintage-input w-full h-48 text-sm leading-loose"></textarea>
                                 <div class="flex gap-2 pt-2">
                                     <button @click="saveSingleEventFromView" class="flex-1 py-3 rounded-xl btn-active font-bold transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">保存修改</button>
                                     <button @click="modal.isEditing = false" class="px-6 py-3 border border-black/10 rounded-xl opacity-40 text-xs">取消</button>
@@ -772,7 +785,7 @@
                             <input v-model="form.event.title" placeholder="标题" class="vintage-input w-full text-sm">
                             <input v-model="form.event.desc" placeholder="简述" class="vintage-input w-full text-sm">
                             <input v-model="form.event.imgUrl" placeholder="插图 URL (可选)" class="vintage-input w-full text-sm">
-                            <textarea v-model="form.event.fullDesc" placeholder="详细描述详情故事..." class="vintage-input w-full h-32 text-sm leading-relaxed"></textarea>
+                            <textarea v-model="form.event.fullDesc" placeholder="详细描述详情故事... (支持加粗**, 斜体*, 分隔线---)" class="vintage-input w-full h-32 text-sm leading-relaxed"></textarea>
                             <button @click="saveSingleEvent" class="w-full py-3 rounded-2xl font-bold mt-4 btn-active transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">镌刻时光</button>
                         </div>
 
@@ -874,15 +887,47 @@
                 const applyStationeryToChar = (config) => {
                     const field = currentTab.value + 'Config';
                     if (!config) delete currentCharacter.value[field];
-                    else currentCharacter.value[field] = JSON.parse(JSON.stringify(config)); // 存储为 Object
+                    else currentCharacter.value[field] = JSON.parse(JSON.stringify(config)); 
                     modal.show = false;
                 };
 
                 const isStationeryActive = (config) => {
                     const active = currentCharacter.value[currentTab.value + 'Config'];
                     if(!active) return false;
-                    // 由于存储的是对象，直接对比
                     return active.bg === config.bg && active.textColor === config.textColor;
+                };
+
+                // 修改：核心排版样式解析引擎
+                const renderMarkdown = (text) => {
+                    if (!text) return "";
+                    // 1. 处理换行分割
+                    let paragraphs = text.split('\n');
+                    let htmlResult = "";
+
+                    paragraphs.forEach(line => {
+                        let trimmed = line.trim();
+                        // 2. 处理美化分隔线
+                        if (trimmed === '---') {
+                            htmlResult += '<hr>';
+                            return;
+                        }
+                        // 如果是空行
+                        if (!trimmed) {
+                            htmlResult += '<div class="h-4"></div>';
+                            return;
+                        }
+
+                        // 3. 处理样式标记
+                        // 加粗 **
+                        line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        // 斜体 *
+                        line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+                        // 4. 封装进段落，利用 CSS 控制缩进和间距
+                        htmlResult += `<p>${line}</p>`;
+                    });
+
+                    return htmlResult;
                 };
 
                 const removePreset = (idx) => { tempSettings.stationeryPresets.splice(idx, 1); };
@@ -909,16 +954,9 @@
                     modal.type = type; modal.show = true; modal.isEditing = false;
                     if (type === 'addCharacter') { modal.title = '建立新缘分'; form.char = { name: '', nickname: '', tags: '', startDate: '', avatar: '', motto: '', bgmUrl: '' }; }
                     else if (type === 'editCharacter') { modal.title = '修缮印记'; form.char = { ...currentCharacter.value }; if (Array.isArray(form.char.tags)) form.char.tags = form.char.tags.join(','); }
-                    else if (type === 'addLetter') { 
-                        modal.title = '落笔成书'; const existing = getLetters()[0];
-                        if (existing) form.letter = { ...existing }; 
-                        else form.letter = { title: '', date: new Date().toISOString().split('T')[0], content: '' }; 
-                    }
+                    else if (type === 'addLetter') { modal.title = '落笔成书'; const existing = getLetters()[0]; if (existing) form.letter = { ...existing }; else form.letter = { title: '', date: new Date().toISOString().split('T')[0], content: '' }; }
                     else if (type === 'editLetter') { modal.title = '重写锦书'; form.letter = { ...data }; }
-                    else if (type === 'editTimeline') { 
-                        modal.title = '整体编辑岁序'; 
-                        form.timeline = rebuildTimelineBasics(parsedTimeline.value); 
-                    }
+                    else if (type === 'editTimeline') { modal.title = '整体编辑岁序'; form.timeline = rebuildTimelineBasics(parsedTimeline.value); }
                     else if (type === 'addTimelineEvent') { modal.title = '添笔新纪'; form.event = { category: '', date: '', title: '', desc: '', fullDesc: '', imgUrl: '' }; }
                     else if (type === 'savePreset') { modal.title = '封存当前装潢至库'; }
                     else if (type === 'saveThemePreset') { modal.title = '封存当前界面方案'; }
@@ -941,7 +979,6 @@
                     return out;
                 };
 
-                // 核心日期排序逻辑增强
                 const parseDateForSort = (str) => {
                     if (!str) return 0;
                     let normalized = str.replace(/[年月./]/g, '-').replace(/日/g, '').replace(/\s+/g, '');
@@ -1002,7 +1039,6 @@
                 const deleteSingleEvent = (item) => {
                     if (confirm('确认抹去这段时光记述？此操作不可撤销。')) {
                         let fullList = [...parsedTimeline.value];
-                        // 找到该条目在当前计算结果中的位置并删除
                         fullList.splice(item._original_index, 1);
                         const pureEvents = fullList.filter(item => item.type === 'event');
                         pureEvents.sort((a, b) => parseDateForSort(a.date) - parseDateForSort(b.date));
@@ -1068,24 +1104,13 @@
                 const toggleMusic = () => { if (!bgmPlayer.value) return; if (isMusicPlaying.value) bgmPlayer.value.pause(); else bgmPlayer.value.play().catch(() => { isMusicPlaying.value = false; }); isMusicPlaying.value = !isMusicPlaying.value; };
                 const exportLetterImage = () => { const area = document.getElementById('letter-canvas'); html2canvas(area, { useCORS: true, scale: 2 }).then(canvas => { const link = document.createElement('a'); link.download = `流年书信-${getCurrentLetter().title}.png`; link.href = canvas.toDataURL(); link.click(); }); };
                 const exportData = () => { const outSettings = currentPage.value === 'workshop' ? tempSettings : settings; const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: outSettings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
-                
-                const importData = (e) => { 
-                    const reader = new FileReader(); reader.onload = (ev) => { 
-                        try { 
-                            const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); 
-                            characters.value = data.characters || []; letters.value = data.letters || {}; 
-                            Object.assign(settings, data.settings); if (currentPage.value === 'workshop') Object.assign(tempSettings, JSON.parse(JSON.stringify(data.settings)));
-                            applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); 
-                        } catch (err) { alert('导入失败，请检查文件格式。'); } 
-                    }; reader.readAsText(e.target.files[0]); 
-                };
+                const importData = (e) => { const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); characters.value = data.characters || []; letters.value = data.letters || {}; Object.assign(settings, data.settings); if (currentPage.value === 'workshop') Object.assign(tempSettings, JSON.parse(JSON.stringify(data.settings))); applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); } catch (err) { alert('导入失败，请检查文件格式。'); } }; reader.readAsText(e.target.files[0]); };
 
                 const RingThemeClass = (color) => { const activeColor = currentPage.value === 'workshop' ? tempSettings.theme.bgColor : settings.theme.bgColor; return activeColor === color ? 'ring-2 ring-black/20 ring-offset-2' : ''; };
                 const tabNameMap = { imprint: '旧影', sentiments: '寄思', echoes: '回响', chronicles: '纪年' };
                 
                 const getActiveLetterConfig = () => {
                     const charConfig = currentCharacter.value[currentTab.value + 'Config'];
-                    // 核心修复：增加类型判断，防止 JSON.parse 报错
                     if (charConfig) {
                         if (typeof charConfig === 'string') {
                             try { return JSON.parse(charConfig); } catch(e) { return settings.stationery; }
@@ -1109,7 +1134,7 @@
                     goHome, calculateDays, selectCharacter, openModal, saveCharacter, confirmDeleteCharacter, enterWorkshop, saveSettings,
                     addCustomFont, removeCustomFont, confirmSavePreset, confirmSaveThemePreset, loadPreset, loadThemePreset, removePreset, removeThemePreset,
                     getLetters, getCurrentLetter, saveLetter, saveTimeline, saveSingleEvent, viewTimelineDetail, saveSingleEventFromView, toggleImportant, deleteSingleEvent,
-                    toggleMusic, exportLetterImage, exportData, importData,
+                    toggleMusic, exportLetterImage, exportData, importData, renderMarkdown,
                     parsedTimeline, getLetterStyle, getPaddingStyle, getLetterPreviewStyle, getPaddingPreviewStyle, getLetterFontPreviewStyle, getActiveLetterConfig, RingThemeClass, handleImgError, isMusicPlaying, bgmPlayer, isLocked: false,
                     openStationeryPicker, applyStationeryToChar, isStationeryActive
                 };
