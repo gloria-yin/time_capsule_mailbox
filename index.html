@@ -82,6 +82,16 @@
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
 
+        /* 标签页滑动动画 */
+        .slide-left-enter-active, .slide-left-leave-active,
+        .slide-right-enter-active, .slide-right-leave-active {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .slide-left-enter-from { transform: translate3d(30px, 0, 0); opacity: 0; }
+        .slide-left-leave-to { transform: translate3d(-30px, 0, 0); opacity: 0; }
+        .slide-right-enter-from { transform: translate3d(-30px, 0, 0); opacity: 0; }
+        .slide-right-leave-to { transform: translate3d(30px, 0, 0); opacity: 0; }
+
         /* 展信动画 */
         .letter-reveal-animation {
             animation: letter-reveal 1s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -253,6 +263,7 @@
             width: 34px;
             height: 34px;
             border-radius: 50%;
+            background: #4a3728;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -397,124 +408,135 @@
                 <!-- 2. 角色详情 -->
                 <div v-else-if="currentPage === 'detail'" key="detail" class="relative">
                     <div class="flex border-b bg-white/30 backdrop-blur-md z-30">
-                        <button v-for="tab in ['imprint', 'sentiments', 'echoes', 'chronicles']" 
-                                :key="tab" @click="currentTab = tab"
+                        <!-- 这里的点击仍然保留 -->
+                        <button v-for="tab in tabOrder" 
+                                :key="tab" @click="handleTabClick(tab)"
                                 :style="currentTab === tab ? { borderBottom: '2px solid ' + settings.theme.textColor, fontWeight: 'bold' } : {}"
                                 class="flex-1 py-3 text-[10px] tracking-widest transition-all opacity-60">
                             {{ tabNameMap[tab] }}
                         </button>
                     </div>
 
-                    <div :class="['sentiments', 'echoes'].includes(currentTab) ? 'px-2 py-6' : 'p-6'">
-                        <!-- 旧影 -->
-                        <div v-if="currentTab === 'imprint'" class="text-center">
-                            <div class="mb-6 relative inline-block">
-                                <div class="paper-texture p-3 rounded shadow-2xl">
-                                    <img :src="currentCharacter.avatar || defaultAvatar" class="w-full aspect-[3/4] object-cover rounded shadow-inner filter sepia-[0.1]">
-                                </div>
-                                <div class="absolute top-6 right-6"><div class="vintage-seal">流年珍藏</div></div>
-                            </div>
-                            <div class="bg-white/40 p-6 rounded-2xl border border-black/5 text-left mb-6 relative overflow-hidden">
-                                <h2 class="text-2xl font-bold font-cursive tracking-wider mb-2">{{ currentCharacter.name }}</h2>
-                                <div class="grid grid-cols-2 gap-4 text-[10px] mb-4">
-                                    <div><p class="opacity-40 uppercase mb-1">已相识</p><p class="font-bold text-sm">{{ calculateDays(currentCharacter.startDate) }} 天</p></div>
-                                    <div><p class="opacity-40 uppercase mb-1">缘起日期</p><p class="font-bold text-sm">{{ currentCharacter.startDate }}</p></div>
-                                </div>
-                                <div class="mb-4">
-                                    <p class="text-[9px] opacity-40 mb-2">印象标签</p>
-                                    <div class="flex flex-wrap gap-2">
-                                        <span v-for="tag in currentCharacter.tags" class="px-2 py-0.5 bg-[#4a3728] text-white rounded text-[8px]">{{ tag }}</span>
+                    <!-- 详情内容区：增加滑动逻辑 -->
+                    <div :class="['sentiments', 'echoes'].includes(currentTab) ? 'px-2 py-6' : 'p-6'"
+                         class="overflow-hidden relative"
+                         @touchstart="handleTouchStart"
+                         @touchend="handleTouchEnd">
+                        
+                        <!-- 使用动态 Transition 实现丝滑左右滑动 -->
+                        <transition :name="tabTransition" mode="out-in">
+                            <div :key="currentTab">
+                                <!-- 旧影 -->
+                                <div v-if="currentTab === 'imprint'" class="text-center">
+                                    <div class="mb-6 relative inline-block">
+                                        <div class="paper-texture p-3 rounded shadow-2xl">
+                                            <img :src="currentCharacter.avatar || defaultAvatar" class="w-full aspect-[3/4] object-cover rounded shadow-inner filter sepia-[0.1]">
+                                        </div>
+                                        <div class="absolute top-6 right-6"><div class="vintage-seal">流年珍藏</div></div>
                                     </div>
-                                </div>
-                                <div><p class="text-[9px] opacity-40 mb-1">心语寄辞</p><p class="text-xs italic leading-relaxed">“{{ currentCharacter.motto || '此时无声胜有声' }}”</p></div>
-                            </div>
-                            <div class="mt-8 flex flex-col gap-3">
-                                <button @click="openModal('editCharacter')" class="text-[10px] opacity-30 hover:opacity-100 transition underline">修缮印记资料</button>
-                                <button @click="confirmDeleteCharacter(currentCharacter.id)" class="text-[10px] text-red-900 opacity-20 hover:opacity-100 transition">抹除此段缘分</button>
-                            </div>
-                        </div>
-
-                        <!-- 寄思 & 回响 -->
-                        <div v-if="currentTab === 'sentiments' || currentTab === 'echoes'">
-                            <div class="flex justify-between items-center mb-4 px-2">
-                                <span class="text-[10px] opacity-40 font-bold uppercase tracking-widest">{{ tabNameMap[currentTab] }}</span>
-                                <div class="flex gap-2">
-                                    <button @click="openStationeryPicker" class="text-[10px] border px-3 py-1 rounded-full btn-active transition-all" :style="{ borderColor: settings.theme.textColor, backgroundColor: 'rgba(255,255,255,0.3)' }"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>装潢</button>
-                                    <button @click="openModal('addLetter')" class="text-[10px] border px-3 py-1 rounded-full btn-active transition-all" :style="{ borderColor: settings.theme.textColor }">落笔</button>
-                                </div>
-                            </div>
-                            <div v-if="getLetters().length === 0" class="py-32 text-center opacity-30 border-2 border-dashed border-black/5 rounded-2xl mx-2"><p class="text-xs">云中谁寄锦书来？</p></div>
-                            <div v-else class="relative">
-                                <transition name="page-flip" mode="out-in">
-                                    <div :key="currentLetterIdx" id="letter-canvas" class="letter-display p-2" :style="getLetterStyle">
-                                        <div class="relative z-10" :style="getPaddingStyle">
-                                            <div class="flex justify-between items-start mb-6"><h2 class="text-xl font-bold border-b border-black/10 pb-2 flex-1" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().title }}</h2></div>
-                                            <p class="text-[10px] opacity-40 mb-6 italic" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().date }}</p>
-                                            <div class="letter-content whitespace-pre-wrap leading-relaxed" 
-                                                 :style="{fontSize: getActiveLetterConfig().fontSize + 'px', color: getActiveLetterConfig().textColor, fontFamily: getActiveLetterConfig().fontFamily}"
-                                                 v-html="renderMarkdown(getCurrentLetter().content)">
+                                    <div class="bg-white/40 p-6 rounded-2xl border border-black/5 text-left mb-6 relative overflow-hidden">
+                                        <h2 class="text-2xl font-bold font-cursive tracking-wider mb-2">{{ currentCharacter.name }}</h2>
+                                        <div class="grid grid-cols-2 gap-4 text-[10px] mb-4">
+                                            <div><p class="opacity-40 uppercase mb-1">已相识</p><p class="font-bold text-sm">{{ calculateDays(currentCharacter.startDate) }} 天</p></div>
+                                            <div><p class="opacity-40 uppercase mb-1">缘起日期</p><p class="font-bold text-sm">{{ currentCharacter.startDate }}</p></div>
+                                        </div>
+                                        <div class="mb-4">
+                                            <p class="text-[9px] opacity-40 mb-2">印象标签</p>
+                                            <div class="flex flex-wrap gap-2">
+                                                <span v-for="tag in currentCharacter.tags" class="px-2 py-0.5 bg-[#4a3728] text-white rounded text-[8px]">{{ tag }}</span>
                                             </div>
-                                            <div class="mt-16 text-right opacity-30 text-[9px] tracking-tighter" :style="{color: getActiveLetterConfig().textColor}">—— 载于 流年函匣 ——</div>
+                                        </div>
+                                        <div><p class="text-[9px] opacity-40 mb-1">心语寄辞</p><p class="text-xs italic leading-relaxed">“{{ currentCharacter.motto || '此时无声胜有声' }}”</p></div>
+                                    </div>
+                                    <div class="mt-8 flex flex-col gap-3">
+                                        <button @click="openModal('editCharacter')" class="text-[10px] opacity-30 hover:opacity-100 transition underline">修缮印记资料</button>
+                                        <button @click="confirmDeleteCharacter(currentCharacter.id)" class="text-[10px] text-red-900 opacity-20 hover:opacity-100 transition">抹除此段缘分</button>
+                                    </div>
+                                </div>
+
+                                <!-- 寄思 & 回响 -->
+                                <div v-if="currentTab === 'sentiments' || currentTab === 'echoes'">
+                                    <div class="flex justify-between items-center mb-4 px-2">
+                                        <span class="text-[10px] opacity-40 font-bold uppercase tracking-widest">{{ tabNameMap[currentTab] }}</span>
+                                        <div class="flex gap-2">
+                                            <button @click="openStationeryPicker" class="text-[10px] border px-3 py-1 rounded-full btn-active transition-all" :style="{ borderColor: settings.theme.textColor, backgroundColor: 'rgba(255,255,255,0.3)' }"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>装潢</button>
+                                            <button @click="openModal('addLetter')" class="text-[10px] border px-3 py-1 rounded-full btn-active transition-all" :style="{ borderColor: settings.theme.textColor }">落笔</button>
                                         </div>
                                     </div>
-                                </transition>
-                                <div class="mt-6 flex gap-4 px-2">
-                                    <button @click="exportLetterImage" class="flex-1 text-[10px] py-2 bg-white border rounded-lg btn-active font-bold shadow-sm" :style="{ borderColor: settings.theme.textColor }">保存长图</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 羁绊纪年 -->
-                        <div v-if="currentTab === 'chronicles'" class="relative pl-5 pr-2 py-4 transition-all">
-                            <div class="absolute left-5 top-0 bottom-0 w-px" :style="{ background: 'linear-gradient(to bottom, transparent, ' + settings.theme.textColor + '44, transparent)' }"></div>
-                            
-                            <div class="flex justify-between items-center mb-10">
-                                <span class="text-[10px] opacity-40 font-bold uppercase tracking-widest pl-4">岁序流轴</span>
-                                <div class="flex gap-2">
-                                    <button @click="openModal('addTimelineEvent')" class="text-[10px] border border-[#4a3728] px-3 py-1 rounded-full btn-active bg-white/50" :style="{ borderColor: settings.theme.textColor }">添笔</button>
-                                    <button @click="openModal('editTimeline')" class="text-[10px] opacity-40 underline btn-active">编辑整体</button>
-                                </div>
-                            </div>
-
-                            <div v-if="parsedTimeline.length === 0" class="py-32 text-center opacity-30"><p class="text-xs italic">岁序尚白，待君落墨</p></div>
-                            
-                            <div v-else class="space-y-10">
-                                <div v-for="(item, i) in parsedTimeline" :key="i" class="relative group">
-                                    <div v-if="item.type === 'stage'" class="text-center py-4 relative z-10">
-                                        <span class="px-6 py-1.5 text-[10px] rounded-full shadow-lg tracking-widest border border-white/20 transition-all" 
-                                              :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">
-                                            {{ item.content }}
-                                        </span>
-                                    </div>
-                                    <div v-else @click="viewTimelineDetail(item, i)" class="relative pl-10 cursor-pointer">
-                                        <div class="absolute left-[-1px] top-1.5 w-3 h-3 rounded-full border-2 transition-transform group-hover:scale-125 z-10" :style="{ borderColor: item.isImportant ? '#8b0000' : settings.theme.textColor, backgroundColor: settings.theme.bgColor }">
-                                            <div v-if="item.isImportant" class="wax-seal"></div>
+                                    <div v-if="getLetters().length === 0" class="py-32 text-center opacity-30 border-2 border-dashed border-black/5 rounded-2xl mx-2"><p class="text-xs">云中谁寄锦书来？</p></div>
+                                    <div v-else class="relative">
+                                        <transition name="page-flip" mode="out-in">
+                                            <div :key="currentLetterIdx" id="letter-canvas" class="letter-display p-2" :style="getLetterStyle">
+                                                <div class="relative z-10" :style="getPaddingStyle">
+                                                    <div class="flex justify-between items-start mb-6"><h2 class="text-xl font-bold border-b border-black/10 pb-2 flex-1" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().title }}</h2></div>
+                                                    <p class="text-[10px] opacity-40 mb-6 italic" :style="{color: getActiveLetterConfig().textColor}">{{ getCurrentLetter().date }}</p>
+                                                    <div class="letter-content whitespace-pre-wrap leading-relaxed" 
+                                                         :style="{fontSize: getActiveLetterConfig().fontSize + 'px', color: getActiveLetterConfig().textColor, fontFamily: getActiveLetterConfig().fontFamily}"
+                                                         v-html="renderMarkdown(getCurrentLetter().content)">
+                                                    </div>
+                                                    <div class="mt-16 text-right opacity-30 text-[9px] tracking-tighter" :style="{color: getActiveLetterConfig().textColor}">—— 载于 流年函匣 ——</div>
+                                                </div>
+                                            </div>
+                                        </transition>
+                                        <div class="mt-6 flex gap-4 px-2">
+                                            <button @click="exportLetterImage" class="flex-1 text-[10px] py-2 bg-white border rounded-lg btn-active font-bold shadow-sm" :style="{ borderColor: settings.theme.textColor }">保存长图</button>
                                         </div>
-                                        
-                                        <div :class="['bg-white/40 p-4 rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-all group-hover:bg-white/60 flex gap-4', item.isImportant ? 'important-event-node' : '']">
-                                            <div class="flex-1 min-w-0">
-                                                <div class="mb-1">
-                                                    <span class="text-[9px] font-bold opacity-40 block uppercase tracking-tighter" :style="{ color: item.isImportant ? '#8b0000' : settings.theme.textColor }">
-                                                        <i v-if="item.isImportant" class="fa-solid fa-stamp mr-1 scale-75"></i>{{ item.date }}
-                                                    </span>
-                                                    <div class="flex items-center gap-2">
-                                                        <h4 class="text-[12px] font-bold tracking-tight group-hover:text-black" :style="{ color: item.isImportant ? '#8b0000' : '' }">
-                                                            {{ item.event }}
-                                                        </h4>
-                                                        <i v-if="item.fullDesc" class="fa-solid fa-feather-pointed text-[9px] opacity-30"></i>
+                                    </div>
+                                </div>
+
+                                <!-- 羁绊纪年 -->
+                                <div v-if="currentTab === 'chronicles'" class="relative pl-5 pr-2 py-4 transition-all">
+                                    <div class="absolute left-5 top-0 bottom-0 w-px" :style="{ background: 'linear-gradient(to bottom, transparent, ' + settings.theme.textColor + '44, transparent)' }"></div>
+                                    
+                                    <div class="flex justify-between items-center mb-10">
+                                        <span class="text-[10px] opacity-40 font-bold uppercase tracking-widest pl-4">岁序流轴</span>
+                                        <div class="flex gap-2">
+                                            <button @click="openModal('addTimelineEvent')" class="text-[10px] border border-[#4a3728] px-3 py-1 rounded-full btn-active bg-white/50" :style="{ borderColor: settings.theme.textColor }">添笔</button>
+                                            <button @click="openModal('editTimeline')" class="text-[10px] opacity-40 underline btn-active">编辑整体</button>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="parsedTimeline.length === 0" class="py-32 text-center opacity-30"><p class="text-xs italic">岁序尚白，待君落墨</p></div>
+                                    
+                                    <div v-else class="space-y-10">
+                                        <div v-for="(item, i) in parsedTimeline" :key="i" class="relative group">
+                                            <div v-if="item.type === 'stage'" class="text-center py-4 relative z-10">
+                                                <span class="px-6 py-1.5 text-[10px] rounded-full shadow-lg tracking-widest border border-white/20 transition-all" 
+                                                      :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">
+                                                    {{ item.content }}
+                                                </span>
+                                            </div>
+                                            <div v-else @click="viewTimelineDetail(item, i)" class="relative pl-10 cursor-pointer">
+                                                <div class="absolute left-[-1px] top-1.5 w-3 h-3 rounded-full border-2 transition-transform group-hover:scale-125 z-10" :style="{ borderColor: item.isImportant ? '#8b0000' : settings.theme.textColor, backgroundColor: settings.theme.bgColor }">
+                                                    <div v-if="item.isImportant" class="wax-seal"></div>
+                                                </div>
+                                                
+                                                <div :class="['bg-white/40 p-4 rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-all group-hover:bg-white/60 flex gap-4', item.isImportant ? 'important-event-node' : '']">
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="mb-1">
+                                                            <span class="text-[9px] font-bold opacity-40 block uppercase tracking-tighter" :style="{ color: item.isImportant ? '#8b0000' : settings.theme.textColor }">
+                                                                <i v-if="item.isImportant" class="fa-solid fa-stamp mr-1 scale-75"></i>{{ item.date }}
+                                                            </span>
+                                                            <div class="flex items-center gap-2">
+                                                                <h4 class="text-[12px] font-bold tracking-tight group-hover:text-black" :style="{ color: item.isImportant ? '#8b0000' : '' }">
+                                                                    {{ item.event }}
+                                                                </h4>
+                                                                <i v-if="item.fullDesc" class="fa-solid fa-feather-pointed text-[9px] opacity-30"></i>
+                                                            </div>
+                                                        </div>
+                                                        <p class="text-[11px] opacity-60 leading-relaxed italic">{{ item.desc }}</p>
+                                                    </div>
+
+                                                    <div v-if="item.imgUrl" class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-black/5 shadow-inner bg-black/5">
+                                                        <img :src="item.imgUrl" referrerpolicy="no-referrer" loading="lazy" class="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700" @error="handleImgError">
                                                     </div>
                                                 </div>
-                                                <p class="text-[11px] opacity-60 leading-relaxed italic">{{ item.desc }}</p>
-                                            </div>
-
-                                            <div v-if="item.imgUrl" class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-black/5 shadow-inner bg-black/5">
-                                                <img :src="item.imgUrl" referrerpolicy="no-referrer" loading="lazy" class="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700" @error="handleImgError">
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </transition>
                     </div>
                 </div>
 
@@ -566,8 +588,8 @@
                                         <button @click="openModal('savePreset')" class="text-[8px] px-2 py-0.5 rounded transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">存入当前方案</button>
                                     </div>
                                     <div v-if="tempSettings.stationeryPresets.length === 0" class="text-center py-4 opacity-30 text-[10px]">库中尚无模板</div>
-                                    <div class="flex gap-4 overflow-x-auto pb-6 hide-scrollbar pt-2">
-                                        <div v-for="(preset, pIdx) in tempSettings.stationeryPresets" :key="pIdx" class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative group transition-all">
+                                    <div class="flex gap-4 overflow-x-auto hide-scrollbar pt-2">
+                                        <div v-for="(preset, pIdx) in tempSettings.stationeryPresets" :key="pIdx" class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative group transition-all mr-4">
                                             <div @click="loadPreset(preset)" class="w-full h-12 rounded bg-cover mb-2 cursor-pointer relative overflow-hidden" :style="{backgroundImage: `url(${preset.config.bg})`}">
                                                 <div class="preset-corner" :style="{ backgroundColor: preset.config.textColor }"></div>
                                             </div>
@@ -612,9 +634,9 @@
                                         <h4 class="font-bold text-[10px] flex items-center gap-2 text-black/60"><i class="fa-solid fa-palette"></i> 界面方案</h4>
                                         <button @click="openModal('saveThemePreset')" class="text-[8px] px-2 py-0.5 rounded transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">保存当前</button>
                                     </div>
-                                    <div class="flex gap-4 overflow-x-auto pb-6 hide-scrollbar pt-2">
+                                    <div class="flex gap-4 overflow-x-auto hide-scrollbar pt-2">
                                         <div v-for="(tp, tIdx) in themePresets" :key="'built-'+tIdx" @click="loadThemePreset(tp)" 
-                                             class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative transition-all active:scale-95">
+                                             class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative transition-all active:scale-95 mr-4">
                                             <div class="w-full h-10 rounded mb-2 relative overflow-hidden shadow-inner" :style="{ backgroundColor: tp.bgColor }">
                                                 <div class="preset-corner" :style="{ backgroundColor: tp.textColor }"></div>
                                                 <div class="flex items-center justify-center h-full text-[10px] font-bold" :style="{ color: tp.textColor }">Aa</div>
@@ -622,7 +644,7 @@
                                             <p class="text-[9px] font-bold truncate text-center">{{ tp.name }}</p>
                                         </div>
                                         <div v-for="(up, uIdx) in tempSettings.themePresets" :key="'user-'+uIdx" 
-                                             class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative group transition-all">
+                                             class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative group transition-all mr-4">
                                             <div @click="loadThemePreset(up.config)" class="w-full h-10 rounded mb-2 relative overflow-hidden shadow-inner cursor-pointer" :style="{ backgroundColor: up.config.bgColor }">
                                                 <div class="preset-corner" :style="{ backgroundColor: up.config.textColor }"></div>
                                                 <div class="flex items-center justify-center h-full text-[10px] font-bold" :style="{ color: up.config.textColor }">Aa</div>
@@ -767,7 +789,6 @@
                                     </div>
                                     <input v-model="modal.data.desc" placeholder="简述" class="vintage-input w-full text-xs">
                                     <input v-model="modal.data.imgUrl" placeholder="插图 URL" class="vintage-input w-full text-xs">
-                                    <!-- 修改点：加长编辑框 -->
                                     <textarea ref="descTextArea" v-model="modal.data.fullDesc" placeholder="详细描述详情故事..." class="vintage-input w-full h-[300px] text-sm leading-loose"></textarea>
                                     <div class="flex gap-2 pt-2">
                                         <button @click="saveSingleEventFromView" class="flex-1 py-3 rounded-xl btn-active font-bold transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">保存修改</button>
@@ -815,6 +836,12 @@
 
                 const modalScrollContainer = ref(null);
                 const descTextArea = ref(null);
+
+                // 滑动切换逻辑相关
+                const tabOrder = ['imprint', 'sentiments', 'echoes', 'chronicles'];
+                const tabTransition = ref('slide-left');
+                const touchStartX = ref(0);
+                const touchStartY = ref(0);
 
                 const themePresets = [
                     { name: '流年故里', bgColor: '#f4ead5', textColor: '#4a3728', font: "'Noto Serif SC', serif" },
@@ -910,6 +937,41 @@
                     return htmlResult;
                 };
 
+                // 滑动逻辑
+                const handleTouchStart = (e) => {
+                    touchStartX.value = e.touches[0].clientX;
+                    touchStartY.value = e.touches[0].clientY;
+                };
+
+                const handleTouchEnd = (e) => {
+                    const deltaX = e.changedTouches[0].clientX - touchStartX.value;
+                    const deltaY = e.changedTouches[0].clientY - touchStartY.value;
+                    
+                    // 确保是横向滑动且位移足够
+                    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+                        const currentIndex = tabOrder.indexOf(currentTab.value);
+                        if (deltaX < 0 && currentIndex < tabOrder.length - 1) {
+                            // 向左滑，进下一个
+                            tabTransition.value = 'slide-left';
+                            currentTab.value = tabOrder[currentIndex + 1];
+                            window.scrollTo(0, 0);
+                        } else if (deltaX > 0 && currentIndex > 0) {
+                            // 向右滑，回上一个
+                            tabTransition.value = 'slide-right';
+                            currentTab.value = tabOrder[currentIndex - 1];
+                            window.scrollTo(0, 0);
+                        }
+                    }
+                };
+
+                const handleTabClick = (tab) => {
+                    const oldIdx = tabOrder.indexOf(currentTab.value);
+                    const newIdx = tabOrder.indexOf(tab);
+                    tabTransition.value = newIdx > oldIdx ? 'slide-left' : 'slide-right';
+                    currentTab.value = tab;
+                    window.scrollTo(0, 0);
+                };
+
                 const removePreset = (idx) => { tempSettings.stationeryPresets.splice(idx, 1); };
                 const removeThemePreset = (idx) => { tempSettings.themePresets.splice(idx, 1); };
                 const goHome = () => { currentPage.value = 'home'; if(bgmPlayer.value) { bgmPlayer.value.pause(); bgmPlayer.value.currentTime = 0; } isMusicPlaying.value = false; };
@@ -936,8 +998,7 @@
                     else if (type === 'editCharacter') { modal.title = '修缮印记'; form.char = { ...currentCharacter.value }; if (Array.isArray(form.char.tags)) form.char.tags = form.char.tags.join(','); }
                     else if (type === 'addLetter') { 
                         modal.title = '落笔成书'; const existing = getLetters()[0];
-                        if (existing) form.letter = { ...existing }; 
-                        else form.letter = { title: '', date: new Date().toISOString().split('T')[0], content: '' }; 
+                        if (existing) form.letter = { ...existing }; else form.letter = { title: '', date: new Date().toISOString().split('T')[0], content: '' }; 
                     }
                     else if (type === 'editLetter') { modal.title = '重写锦书'; form.letter = { ...data }; }
                     else if (type === 'editTimeline') { 
@@ -1138,6 +1199,7 @@
                 return {
                     currentPage, currentTab, characters, currentCharacter, settings, tempSettings, fontInput, themeOptions, themePresets,
                     tabNameMap, modal, form, currentLetterIdx, defaultAvatar, workshopUi,
+                    tabOrder, tabTransition, handleTouchStart, handleTouchEnd, handleTabClick,
                     goHome, calculateDays, selectCharacter, openModal, saveCharacter, confirmDeleteCharacter, enterWorkshop, saveSettings,
                     addCustomFont, removeCustomFont, confirmSavePreset, confirmSaveThemePreset, loadPreset, loadThemePreset, removePreset, removeThemePreset,
                     getLetters, getCurrentLetter, saveLetter, saveTimeline, saveSingleEvent, viewTimelineDetail, saveSingleEventFromView, toggleImportant, deleteSingleEvent,
@@ -1151,4 +1213,3 @@
     </script>
 </body>
 </html>
-
