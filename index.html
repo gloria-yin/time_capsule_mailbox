@@ -423,16 +423,16 @@
                         
                         <transition :name="tabTransition" mode="out-in">
                             <div :key="currentTab">
-                                <!-- 旧影 (User照片调整部分) -->
+                                <!-- 旧影 -->
                                 <div v-if="currentTab === 'imprint'" class="text-center">
                                     <div class="mb-10 relative inline-block">
                                         <div class="paper-texture p-3 rounded shadow-2xl relative">
                                             <!-- 角色主照片 -->
                                             <img :src="currentCharacter.avatar || defaultAvatar" class="w-full aspect-[3/4] object-cover rounded shadow-inner filter sepia-[0.1]">
                                             
-                                            <!-- 用户叠影照片 (尺寸调大至 w-32) -->
+                                            <!-- 用户叠影照片 (尺寸调大至 w-32, 背景色修改为和角色图片一样的黄色黄色拍立得边框) -->
                                             <div v-if="currentCharacter.userAvatar" 
-                                                 class="absolute -bottom-6 -right-6 w-32 h-32 bg-white p-2 shadow-2xl transform rotate-3 border border-black/5 transition-all hover:rotate-0 hover:scale-105 z-20">
+                                                 class="absolute -bottom-6 -right-6 w-32 h-32 paper-texture bg-[#f4ead5] p-2 shadow-2xl transform rotate-3 border border-black/5 transition-all hover:rotate-0 hover:scale-105 z-20">
                                                 <img :src="currentCharacter.userAvatar" class="w-full h-full object-cover grayscale-[0.05]">
                                                 <div class="absolute inset-0 border border-black/5 pointer-events-none"></div>
                                             </div>
@@ -743,7 +743,6 @@
 
                         <!-- 内容区 -->
                         <div class="px-6 pb-8">
-                            <!-- 角色编辑 -->
                             <div v-if="modal.type === 'addCharacter' || modal.type === 'editCharacter'" class="space-y-4">
                                 <input v-model="form.char.name" placeholder="角色姓名" class="vintage-input w-full text-sm">
                                 <input v-model="form.char.nickname" placeholder="昵称" class="vintage-input w-full text-sm">
