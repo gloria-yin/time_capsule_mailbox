@@ -408,7 +408,6 @@
                 <!-- 2. 角色详情 -->
                 <div v-else-if="currentPage === 'detail'" key="detail" class="relative">
                     <div class="flex border-b bg-white/30 backdrop-blur-md z-30">
-                        <!-- 这里的点击仍然保留 -->
                         <button v-for="tab in tabOrder" 
                                 :key="tab" @click="handleTabClick(tab)"
                                 :style="currentTab === tab ? { borderBottom: '2px solid ' + settings.theme.textColor, fontWeight: 'bold' } : {}"
@@ -417,20 +416,26 @@
                         </button>
                     </div>
 
-                    <!-- 详情内容区：增加滑动逻辑 -->
                     <div :class="['sentiments', 'echoes'].includes(currentTab) ? 'px-2 py-6' : 'p-6'"
                          class="overflow-hidden relative"
                          @touchstart="handleTouchStart"
                          @touchend="handleTouchEnd">
                         
-                        <!-- 使用动态 Transition 实现丝滑左右滑动 -->
                         <transition :name="tabTransition" mode="out-in">
                             <div :key="currentTab">
-                                <!-- 旧影 -->
+                                <!-- 旧影 (User照片调整部分) -->
                                 <div v-if="currentTab === 'imprint'" class="text-center">
-                                    <div class="mb-6 relative inline-block">
-                                        <div class="paper-texture p-3 rounded shadow-2xl">
+                                    <div class="mb-10 relative inline-block">
+                                        <div class="paper-texture p-3 rounded shadow-2xl relative">
+                                            <!-- 角色主照片 -->
                                             <img :src="currentCharacter.avatar || defaultAvatar" class="w-full aspect-[3/4] object-cover rounded shadow-inner filter sepia-[0.1]">
+                                            
+                                            <!-- 用户叠影照片 (尺寸调大至 w-32) -->
+                                            <div v-if="currentCharacter.userAvatar" 
+                                                 class="absolute -bottom-6 -right-6 w-32 h-32 bg-white p-2 shadow-2xl transform rotate-3 border border-black/5 transition-all hover:rotate-0 hover:scale-105 z-20">
+                                                <img :src="currentCharacter.userAvatar" class="w-full h-full object-cover grayscale-[0.05]">
+                                                <div class="absolute inset-0 border border-black/5 pointer-events-none"></div>
+                                            </div>
                                         </div>
                                         <div class="absolute top-6 right-6"><div class="vintage-seal">流年珍藏</div></div>
                                     </div>
@@ -738,12 +743,14 @@
 
                         <!-- 内容区 -->
                         <div class="px-6 pb-8">
+                            <!-- 角色编辑 -->
                             <div v-if="modal.type === 'addCharacter' || modal.type === 'editCharacter'" class="space-y-4">
                                 <input v-model="form.char.name" placeholder="角色姓名" class="vintage-input w-full text-sm">
                                 <input v-model="form.char.nickname" placeholder="昵称" class="vintage-input w-full text-sm">
                                 <input v-model="form.char.tags" placeholder="标签" class="vintage-input w-full text-sm">
                                 <input v-model="form.char.startDate" type="date" class="vintage-input w-full text-sm">
-                                <input v-model="form.char.avatar" placeholder="照片 URL" class="vintage-input w-full text-sm">
+                                <input v-model="form.char.avatar" placeholder="角色照片 URL" class="vintage-input w-full text-sm">
+                                <input v-model="form.char.userAvatar" placeholder="你的照片 URL (可选，将展示在右下角)" class="vintage-input w-full text-sm">
                                 <input v-model="form.char.bgmUrl" placeholder="BGM URL" class="vintage-input w-full text-sm">
                                 <textarea v-model="form.char.motto" placeholder="个性签名..." class="vintage-input w-full h-20 text-sm"></textarea>
                                 <button @click="saveCharacter" class="w-full py-3 rounded-2xl font-bold mt-4 btn-active transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">定格缘分</button>
@@ -837,7 +844,6 @@
                 const modalScrollContainer = ref(null);
                 const descTextArea = ref(null);
 
-                // 滑动切换逻辑相关
                 const tabOrder = ['imprint', 'sentiments', 'echoes', 'chronicles'];
                 const tabTransition = ref('slide-left');
                 const touchStartX = ref(0);
@@ -937,7 +943,6 @@
                     return htmlResult;
                 };
 
-                // 滑动逻辑
                 const handleTouchStart = (e) => {
                     touchStartX.value = e.touches[0].clientX;
                     touchStartY.value = e.touches[0].clientY;
@@ -946,17 +951,13 @@
                 const handleTouchEnd = (e) => {
                     const deltaX = e.changedTouches[0].clientX - touchStartX.value;
                     const deltaY = e.changedTouches[0].clientY - touchStartY.value;
-                    
-                    // 确保是横向滑动且位移足够
                     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
                         const currentIndex = tabOrder.indexOf(currentTab.value);
                         if (deltaX < 0 && currentIndex < tabOrder.length - 1) {
-                            // 向左滑，进下一个
                             tabTransition.value = 'slide-left';
                             currentTab.value = tabOrder[currentIndex + 1];
                             window.scrollTo(0, 0);
                         } else if (deltaX > 0 && currentIndex > 0) {
-                            // 向右滑，回上一个
                             tabTransition.value = 'slide-right';
                             currentTab.value = tabOrder[currentIndex - 1];
                             window.scrollTo(0, 0);
@@ -994,8 +995,15 @@
 
                 const openModal = (type, data = null) => {
                     modal.type = type; modal.show = true; modal.isEditing = false;
-                    if (type === 'addCharacter') { modal.title = '建立新缘分'; form.char = { name: '', nickname: '', tags: '', startDate: '', avatar: '', motto: '', bgmUrl: '' }; }
-                    else if (type === 'editCharacter') { modal.title = '修缮印记'; form.char = { ...currentCharacter.value }; if (Array.isArray(form.char.tags)) form.char.tags = form.char.tags.join(','); }
+                    if (type === 'addCharacter') { 
+                        modal.title = '建立新缘分'; 
+                        form.char = { name: '', nickname: '', tags: '', startDate: '', avatar: '', userAvatar: '', motto: '', bgmUrl: '' }; 
+                    }
+                    else if (type === 'editCharacter') { 
+                        modal.title = '修缮印记'; 
+                        form.char = { ...currentCharacter.value }; 
+                        if (Array.isArray(form.char.tags)) form.char.tags = form.char.tags.join(','); 
+                    }
                     else if (type === 'addLetter') { 
                         modal.title = '落笔成书'; const existing = getLetters()[0];
                         if (existing) form.letter = { ...existing }; else form.letter = { title: '', date: new Date().toISOString().split('T')[0], content: '' }; 
@@ -1010,7 +1018,21 @@
                     else if (type === 'saveThemePreset') { modal.title = '封存当前界面方案'; }
                 };
 
-                const saveCharacter = () => { const charData = { ...form.char, id: form.char.id || Date.now(), tags: typeof form.char.tags === 'string' ? form.char.tags.split(/[,，]/).map(t => t.trim()) : form.char.tags }; if (modal.type === 'addCharacter') characters.value.push(charData); else { const idx = characters.value.findIndex(c => c.id === charData.id); characters.value[idx] = charData; currentCharacter.value = charData; } modal.show = false; };
+                const saveCharacter = () => { 
+                    const charData = { 
+                        ...form.char, 
+                        id: form.char.id || Date.now(), 
+                        tags: typeof form.char.tags === 'string' ? form.char.tags.split(/[,，]/).map(t => t.trim()) : form.char.tags 
+                    }; 
+                    if (modal.type === 'addCharacter') characters.value.push(charData); 
+                    else { 
+                        const idx = characters.value.findIndex(c => c.id === charData.id); 
+                        characters.value[idx] = charData; 
+                        currentCharacter.value = charData; 
+                    } 
+                    modal.show = false; 
+                };
+                
                 const confirmDeleteCharacter = (id) => { if (confirm('抹除后记忆不可追。确定吗？')) { characters.value = characters.value.filter(c => c.id !== id); delete letters.value[id]; goHome(); } };
                 const getCurrentLetter = () => getLetters()[currentLetterIdx.value] || {};
                 const saveLetter = () => { const charId = currentCharacter.value.id; if (!letters.value[charId]) letters.value[charId] = { sentiments: [], echoes: [] }; const list = letters.value[charId][currentTab.value]; list[0] = { ...form.letter }; modal.show = false; };
@@ -1147,17 +1169,7 @@
                 const toggleMusic = () => { if (!bgmPlayer.value) return; if (isMusicPlaying.value) bgmPlayer.value.pause(); else bgmPlayer.value.play().catch(() => { isMusicPlaying.value = false; }); isMusicPlaying.value = !isMusicPlaying.value; };
                 const exportLetterImage = () => { const area = document.getElementById('letter-canvas'); html2canvas(area, { useCORS: true, scale: 2 }).then(canvas => { const link = document.createElement('a'); link.download = `流年书信-${getCurrentLetter().title}.png`; link.href = canvas.toDataURL(); link.click(); }); };
                 const exportData = () => { const outSettings = currentPage.value === 'workshop' ? tempSettings : settings; const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: outSettings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
-                
-                const importData = (e) => { 
-                    const reader = new FileReader(); reader.onload = (ev) => { 
-                        try { 
-                            const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); 
-                            characters.value = data.characters || []; letters.value = data.letters || {}; 
-                            Object.assign(settings, data.settings); if (currentPage.value === 'workshop') Object.assign(tempSettings, JSON.parse(JSON.stringify(data.settings)));
-                            applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); 
-                        } catch (err) { alert('导入失败，请检查文件格式。'); } 
-                    }; reader.readAsText(e.target.files[0]); 
-                };
+                const importData = (e) => { const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); characters.value = data.characters || []; letters.value = data.letters || {}; Object.assign(settings, data.settings); if (currentPage.value === 'workshop') Object.assign(tempSettings, JSON.parse(JSON.stringify(data.settings))); applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); } catch (err) { alert('导入失败，请检查文件格式。'); } }; reader.readAsText(e.target.files[0]); };
 
                 const RingThemeClass = (color) => { const activeColor = currentPage.value === 'workshop' ? tempSettings.theme.bgColor : settings.theme.bgColor; return activeColor === color ? 'ring-2 ring-black/20 ring-offset-2' : ''; };
                 const tabNameMap = { imprint: '旧影', sentiments: '寄思', echoes: '回响', chronicles: '纪年' };
