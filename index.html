@@ -11,31 +11,34 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="apple-touch-icon" href="https://static.eeo.cn/upload/file/20260129/1769665951876415.jpg">
     
+    <!-- 修复：使用 Base64 内联数据确保手机桌面启动路径正确 -->
     <link rel="manifest" id="manifest-link">
     <script>
-        const manifest = {
-            "name": "流年函匣",
-            "short_name": "函匣",
-            "start_url": ".",
-            "display": "standalone",
-            "background_color": "#ffffff",
-            "theme_color": "#f4ead5",
-            "icons": [
-                {
-                    "src": "https://vos.v5kf.com/public/resource/10000/c80db48a-8c75-1073-881b-8cc44088410a.png",
-                    "sizes": "192x192",
-                    "type": "image/jpeg"
-                },
-                {
-                    "src": "https://vos.v5kf.com/public/resource/10000/c80db48a-8c75-1073-881b-8cc44088410a.png",
-                    "sizes": "512x512",
-                    "type": "image/jpeg"
-                }
-            ]
-        };
-        const stringManifest = JSON.stringify(manifest);
-        const blob = new Blob([stringManifest], {type: 'application/json'});
-        document.getElementById('manifest-link').setAttribute('href', URL.createObjectURL(blob));
+        (function() {
+            const manifest = {
+                "name": "流年函匣",
+                "short_name": "函匣",
+                "start_url": window.location.href,
+                "display": "standalone",
+                "background_color": "#ffffff",
+                "theme_color": "#f4ead5",
+                "icons": [
+                    {
+                        "src": "https://vos.v5kf.com/public/resource/10000/c80db48a-8c75-1073-881b-8cc44088410a.png",
+                        "sizes": "192x192",
+                        "type": "image/png"
+                    },
+                    {
+                        "src": "https://vos.v5kf.com/public/resource/10000/c80db48a-8c75-1073-881b-8cc44088410a.png",
+                        "sizes": "512x512",
+                        "type": "image/png"
+                    }
+                ]
+            };
+            const stringManifest = JSON.stringify(manifest);
+            const base64Manifest = btoa(unescape(encodeURIComponent(stringManifest)));
+            document.getElementById('manifest-link').setAttribute('href', 'data:application/json;base64,' + base64Manifest);
+        })();
     </script>
 
     <!-- 引入资源 -->
@@ -136,11 +139,13 @@
             position: relative;
         }
 
+        /* 统一内容排版规则 */
         .letter-content p {
             margin-bottom: 0.5em;
             text-indent: 2em;
         }
 
+        /* 分隔线样式 */
         .letter-content hr {
             border: none;
             border-top: 1px dashed rgba(0,0,0,0.15);
@@ -149,9 +154,11 @@
             text-indent: 0; 
         }
 
+        /* 加粗和斜体修饰 */
         .letter-content strong { font-weight: 700; opacity: 1; }
         .letter-content em { font-style: italic; opacity: 0.9; }
 
+        /* 对话内容特殊样式 */
         .dialogue-content {
             font-style: italic;
             opacity: 0.8;
@@ -423,7 +430,10 @@
                                 <div v-if="currentTab === 'imprint'" class="text-center">
                                     <div class="mb-10 relative inline-block">
                                         <div class="paper-texture p-3 rounded shadow-2xl relative">
+                                            <!-- 角色主照片 -->
                                             <img :src="currentCharacter.avatar || defaultAvatar" class="w-full aspect-[3/4] object-cover rounded shadow-inner filter sepia-[0.1]">
+                                            
+                                            <!-- 用户叠影照片 -->
                                             <div v-if="currentCharacter.userAvatar" 
                                                  class="absolute -bottom-6 -right-6 w-32 h-32 paper-texture bg-[#f4ead5] p-2 shadow-2xl transform rotate-3 border border-black/5 transition-all hover:rotate-0 hover:scale-105 z-20">
                                                 <img :src="currentCharacter.userAvatar" class="w-full h-full object-cover grayscale-[0.05]">
@@ -686,7 +696,6 @@
                                 <input type="file" ref="fileInput" class="hidden" @change="importData">
                             </div>
                         </section>
-                        <!-- 修改点：由于已经实时保存，这里改为“结束装修”并返回主页 -->
                         <div class="pt-4 pb-8">
                             <button @click="goHome" class="w-full py-4 rounded-2xl font-bold shadow-2xl btn-active tracking-widest transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">
                                 <i class="fa-solid fa-house mr-2"></i> 结束装修并返回
@@ -866,7 +875,6 @@
                 const fontInput = reactive({ name: '', url: '' });
                 const themeOptions = ['#f4ead5', '#e8e6e1', '#d8e2dc', '#fcd5ce', '#9eb5c4'];
 
-                // 核心监听：任何 settings 的变化都会立即同步到本地存储
                 watch([characters, letters, settings], () => { 
                     localStorage.setItem('lyhx_chars', JSON.stringify(characters.value)); 
                     localStorage.setItem('lyhx_letters', JSON.stringify(letters.value));
@@ -876,7 +884,6 @@
                 const applyCustomFontsToPage = (fonts) => { const styleEl = document.getElementById('custom-fonts-style'); if (!styleEl) return; let css = ''; fonts.forEach(f => { css += `@font-face { font-family: "${f.name}"; src: url("${f.url}"); font-display: swap; }\n`; }); styleEl.innerHTML = css; };
                 const enterWorkshop = () => { applyCustomFontsToPage(settings.customFonts); currentPage.value = 'workshop'; };
                 
-                // 实时保存：添加字体后立即更新页面
                 const addCustomFont = () => { 
                     if (!fontInput.name || !fontInput.url) return; 
                     settings.customFonts.push({ name: fontInput.name, url: fontInput.url }); 
@@ -886,7 +893,6 @@
 
                 const removeCustomFont = (idx) => { settings.customFonts.splice(idx, 1); applyCustomFontsToPage(settings.customFonts); };
                 
-                // 实时保存：保存预设逻辑
                 const confirmSavePreset = () => { 
                     if(!form.presetName) return; 
                     const existingIdx = settings.stationeryPresets.findIndex(p => p.name === form.presetName);
@@ -1164,7 +1170,7 @@
                 const handleImgError = (e) => { if (e.target.src !== defaultAvatar) e.target.src = defaultAvatar; };
                 const toggleMusic = () => { if (!bgmPlayer.value) return; if (isMusicPlaying.value) bgmPlayer.value.pause(); else bgmPlayer.value.play().catch(() => { isMusicPlaying.value = false; }); isMusicPlaying.value = !isMusicPlaying.value; };
                 const exportLetterImage = () => { const area = document.getElementById('letter-canvas'); html2canvas(area, { useCORS: true, scale: 2 }).then(canvas => { const link = document.createElement('a'); link.download = `流年书信-${getCurrentLetter().title}.png`; link.href = canvas.toDataURL(); link.click(); }); };
-                const exportData = () => { const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: settings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
+                const exportData = () => { const outSettings = currentPage.value === 'workshop' ? tempSettings : settings; const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: settings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
                 const importData = (e) => { const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); characters.value = data.characters || []; letters.value = data.letters || {}; Object.assign(settings, data.settings); applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); } catch (err) { alert('导入失败，请检查文件格式。'); } }; reader.readAsText(e.target.files[0]); };
 
                 const RingThemeClass = (color) => settings.theme.bgColor === color ? 'ring-2 ring-black/20 ring-offset-2' : '';
