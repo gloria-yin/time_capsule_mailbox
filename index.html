@@ -136,26 +136,22 @@
             position: relative;
         }
 
-        /* 统一内容排版规则 */
         .letter-content p {
             margin-bottom: 0.5em;
             text-indent: 2em;
         }
 
-        /* 分隔线样式 */
         .letter-content hr {
             border: none;
             border-top: 1px dashed rgba(0,0,0,0.15);
             margin: 1.5rem auto;
             width: 70%;
-            text-indent: 0; /* 分隔线不缩进 */
+            text-indent: 0; 
         }
 
-        /* 加粗和斜体修饰 */
         .letter-content strong { font-weight: 700; opacity: 1; }
         .letter-content em { font-style: italic; opacity: 0.9; }
 
-        /* 对话内容特殊样式 */
         .dialogue-content {
             font-style: italic;
             opacity: 0.8;
@@ -345,7 +341,7 @@
                             'vinyl-record'
                         ]" :style="{ color: settings.theme.bgColor }"></i>
                     </button>
-                    <button v-if="currentPage === 'home'" @click="enterWorkshop" class="opacity-50 hover:opacity-100 transition p-2" :style="{ color: settings.theme.textColor }">
+                    <button v-if="currentPage === 'home'" @click="currentPage = 'workshop'" class="opacity-50 hover:opacity-100 transition p-2" :style="{ color: settings.theme.textColor }">
                         <i class="fa-solid fa-paintbrush"></i>
                     </button>
                 </div>
@@ -427,10 +423,7 @@
                                 <div v-if="currentTab === 'imprint'" class="text-center">
                                     <div class="mb-10 relative inline-block">
                                         <div class="paper-texture p-3 rounded shadow-2xl relative">
-                                            <!-- 角色主照片 -->
                                             <img :src="currentCharacter.avatar || defaultAvatar" class="w-full aspect-[3/4] object-cover rounded shadow-inner filter sepia-[0.1]">
-                                            
-                                            <!-- 用户叠影照片 (尺寸调大至 w-32, 背景色修改为和角色图片一样的黄色黄色拍立得边框) -->
                                             <div v-if="currentCharacter.userAvatar" 
                                                  class="absolute -bottom-6 -right-6 w-32 h-32 paper-texture bg-[#f4ead5] p-2 shadow-2xl transform rotate-3 border border-black/5 transition-all hover:rotate-0 hover:scale-105 z-20">
                                                 <img :src="currentCharacter.userAvatar" class="w-full h-full object-cover grayscale-[0.05]">
@@ -516,24 +509,24 @@
                                                     <div v-if="item.isImportant" class="wax-seal"></div>
                                                 </div>
                                                 
-                                                <div :class="['bg-white/40 p-4 rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-all group-hover:bg-white/60 flex gap-4', item.isImportant ? 'important-event-node' : '']">
-                                                    <div class="flex-1 min-w-0">
-                                                        <div class="mb-1">
-                                                            <span class="text-[9px] font-bold opacity-40 block uppercase tracking-tighter" :style="{ color: item.isImportant ? '#8b0000' : settings.theme.textColor }">
-                                                                <i v-if="item.isImportant" class="fa-solid fa-stamp mr-1 scale-75"></i>{{ item.date }}
-                                                            </span>
-                                                            <div class="flex items-center gap-2">
-                                                                <h4 class="text-[12px] font-bold tracking-tight group-hover:text-black" :style="{ color: item.isImportant ? '#8b0000' : '' }">
-                                                                    {{ item.event }}
-                                                                </h4>
-                                                                <i v-if="item.fullDesc" class="fa-solid fa-feather-pointed text-[9px] opacity-30"></i>
-                                                            </div>
+                                                <div :class="['bg-white/40 p-4 rounded-xl border border-black/5 shadow-sm hover:shadow-md transition-all group-hover:bg-white/60', item.isImportant ? 'important-event-node' : '']">
+                                                    <div class="mb-1">
+                                                        <span class="text-[9px] font-bold opacity-40 block uppercase tracking-tighter" :style="{ color: item.isImportant ? '#8b0000' : settings.theme.textColor }">
+                                                            <i v-if="item.isImportant" class="fa-solid fa-stamp mr-1 scale-75"></i>{{ item.date }}
+                                                        </span>
+                                                        <div class="flex items-center gap-2">
+                                                            <h4 class="text-[12px] font-bold tracking-tight group-hover:text-black" :style="{ color: item.isImportant ? '#8b0000' : '' }">
+                                                                {{ item.event }}
+                                                            </h4>
+                                                            <i v-if="item.fullDesc" class="fa-solid fa-feather-pointed text-[9px] opacity-30"></i>
                                                         </div>
-                                                        <p class="text-[11px] opacity-60 leading-relaxed italic">{{ item.desc }}</p>
                                                     </div>
-
-                                                    <div v-if="item.imgUrl" class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-black/5 shadow-inner bg-black/5">
-                                                        <img :src="item.imgUrl" referrerpolicy="no-referrer" loading="lazy" class="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700" @error="handleImgError">
+                                                    
+                                                    <div class="flex gap-4 items-start">
+                                                        <p class="text-[11px] opacity-60 leading-relaxed italic flex-1 min-w-0">{{ item.desc }}</p>
+                                                        <div v-if="item.imgUrl" class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-black/5 shadow-inner bg-black/5">
+                                                            <img :src="item.imgUrl" referrerpolicy="no-referrer" loading="lazy" class="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700" @error="handleImgError">
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -545,7 +538,7 @@
                     </div>
                 </div>
 
-                <!-- 3. 时光工坊 -->
+                <!-- 3. 时光工坊 (修改: 实时保存逻辑) -->
                 <div v-else-if="currentPage === 'workshop'" key="workshop" class="p-6">
                     <div class="flex justify-between items-center mb-8">
                         <h3 class="text-lg font-bold border-l-4 border-[#4a3728] pl-3" :style="{ borderColor: settings.theme.textColor }">时光工坊</h3>
@@ -568,7 +561,7 @@
                                             <div class="relative z-10" :style="getPaddingPreviewStyle">
                                                 <div class="letter-content leading-relaxed" 
                                                      :style="getLetterFontPreviewStyle"
-                                                     v-html="renderMarkdown('我爱你。\n“我讨厌距离、阴影、痛苦、下雨。”\n我想要明亮的日子，和你一起，靠着大海和沙滩……\n---\n可是我在等你，身无片甲，赤手空拳。')">
+                                                     v-html="renderMarkdown('“我爱你。”\n*我讨厌距离、阴影、痛苦、下雨。*\n我想要明亮的日子，和你一起，靠着大海和沙滩，我想要奇幻的天空，我喜爱的国度，但是要和你在一起，和你在一起……我想要肉体、温度、石头、光滑的水，所有我们可以触摸的东西。\n**我恨做梦，我恨等待……**\n可是我在等你，身无片甲，赤手空拳。')">
                                                 </div>
                                             </div>
                                         </div>
@@ -576,15 +569,15 @@
                                 </div>
 
                                 <div class="space-y-4">
-                                    <div><label class="text-[9px] opacity-40 block mb-1">底纹 URL</label><input v-model="tempSettings.stationery.bg" class="vintage-input w-full text-xs"></div>
+                                    <div><label class="text-[9px] opacity-40 block mb-1">底纹 URL</label><input v-model="settings.stationery.bg" class="vintage-input w-full text-xs"></div>
                                     <div class="grid grid-cols-2 gap-4">
-                                        <div><label class="text-[9px] opacity-40 block mb-1">笔触选择</label><select v-model="tempSettings.stationery.fontFamily" class="vintage-input w-full text-xs bg-transparent"><option value="'Zhi Mang Xing', cursive">手写草书</option><option value="'Noto Serif SC', serif">精美衬线</option><option value="'KaiTi', serif">复古楷体</option><option v-for="cf in tempSettings.customFonts" :key="cf.name" :value="cf.name">{{ cf.name }}</option></select></div>
-                                        <div><label class="text-[9px] opacity-40 block mb-1">墨水颜色</label><input type="color" v-model="tempSettings.stationery.textColor" class="w-full h-8 bg-transparent border-none"></div>
+                                        <div><label class="text-[9px] opacity-40 block mb-1">笔触选择</label><select v-model="settings.stationery.fontFamily" class="vintage-input w-full text-xs bg-transparent"><option value="'Zhi Mang Xing', cursive">手写草书</option><option value="'Noto Serif SC', serif">精美衬线</option><option value="'KaiTi', serif">复古楷体</option><option v-for="cf in settings.customFonts" :key="cf.name" :value="cf.name">{{ cf.name }}</option></select></div>
+                                        <div><label class="text-[9px] opacity-40 block mb-1">墨水颜色</label><input type="color" v-model="settings.stationery.textColor" class="w-full h-8 bg-transparent border-none"></div>
                                     </div>
                                     <div class="grid grid-cols-1 gap-x-6 gap-y-4">
-                                        <div><label class="text-[9px] opacity-40 block">边际留白 ({{ tempSettings.stationery.pSide }}px)</label><input type="range" min="0" max="150" v-model="tempSettings.stationery.pSide" class="w-full accent-[#4a3728]"></div>
+                                        <div><label class="text-[9px] opacity-40 block">边际留白 ({{ settings.stationery.pSide }}px)</label><input type="range" min="0" max="150" v-model="settings.stationery.pSide" class="w-full accent-[#4a3728]"></div>
                                     </div>
-                                    <div><label class="text-[9px] opacity-40 block mb-1">字号大小 ({{ tempSettings.stationery.fontSize }}px)</label><input type="range" min="12" max="32" v-model="tempSettings.stationery.fontSize" class="w-full accent-[#4a3728]"></div>
+                                    <div><label class="text-[9px] opacity-40 block mb-1">字号大小 ({{ settings.stationery.fontSize }}px)</label><input type="range" min="12" max="32" v-model="settings.stationery.fontSize" class="w-full accent-[#4a3728]"></div>
                                 </div>
 
                                 <div class="pt-6 border-t border-black/5">
@@ -592,9 +585,9 @@
                                         <h4 class="font-bold text-[10px] flex items-center gap-2 text-black/60"><i class="fa-solid fa-box-open"></i> 信纸预设模板库</h4>
                                         <button @click="openModal('savePreset')" class="text-[8px] px-2 py-0.5 rounded transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">存入当前方案</button>
                                     </div>
-                                    <div v-if="tempSettings.stationeryPresets.length === 0" class="text-center py-4 opacity-30 text-[10px]">库中尚无模板</div>
+                                    <div v-if="settings.stationeryPresets.length === 0" class="text-center py-4 opacity-30 text-[10px]">库中尚无模板</div>
                                     <div class="flex gap-4 overflow-x-auto hide-scrollbar pt-2">
-                                        <div v-for="(preset, pIdx) in tempSettings.stationeryPresets" :key="pIdx" class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative group transition-all mr-4">
+                                        <div v-for="(preset, pIdx) in settings.stationeryPresets" :key="pIdx" class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative group transition-all mr-4">
                                             <div @click="loadPreset(preset)" class="w-full h-12 rounded bg-cover mb-2 cursor-pointer relative overflow-hidden" :style="{backgroundImage: `url(${preset.config.bg})`}">
                                                 <div class="preset-corner" :style="{ backgroundColor: preset.config.textColor }"></div>
                                             </div>
@@ -615,21 +608,21 @@
                             </h4>
                             
                             <div v-if="workshopUi.showTheme" class="p-5 pt-0 space-y-4">
-                                <div><label class="text-[9px] opacity-40 block mb-2">系统全局字体</label><select v-model="tempSettings.theme.globalFont" class="vintage-input w-full text-xs bg-transparent"><option value="'Noto Serif SC', serif">默认衬线</option><option value="'SimHei', sans-serif">现代黑体</option><option value="'STKaiti', serif">经典楷体</option><option v-for="cf in tempSettings.customFonts" :key="cf.name" :value="cf.name">{{ cf.name }}</option></select></div>
+                                <div><label class="text-[9px] opacity-40 block mb-2">系统全局字体</label><select v-model="settings.theme.globalFont" class="vintage-input w-full text-xs bg-transparent"><option value="'Noto Serif SC', serif">默认衬线</option><option value="'SimHei', sans-serif">现代黑体</option><option value="'STKaiti', serif">经典楷体</option><option v-for="cf in settings.customFonts" :key="cf.name" :value="cf.name">{{ cf.name }}</option></select></div>
                                 
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label class="text-[9px] opacity-40 block mb-2">文字颜色</label>
                                         <div class="flex items-center gap-2">
-                                            <input type="color" v-model="tempSettings.theme.textColor" class="w-8 h-8 bg-transparent border-none cursor-pointer">
-                                            <span class="text-[8px] opacity-40 font-mono">{{ tempSettings.theme.textColor }}</span>
+                                            <input type="color" v-model="settings.theme.textColor" class="w-8 h-8 bg-transparent border-none cursor-pointer">
+                                            <span class="text-[8px] opacity-40 font-mono">{{ settings.theme.textColor }}</span>
                                         </div>
                                     </div>
                                     <div>
                                         <label class="text-[9px] opacity-40 block mb-2">背景颜色</label>
                                         <div class="flex items-center gap-2">
-                                            <input type="color" v-model="tempSettings.theme.bgColor" class="w-8 h-8 bg-transparent border-none cursor-pointer">
-                                            <span class="text-[8px] opacity-40 font-mono">{{ tempSettings.theme.bgColor }}</span>
+                                            <input type="color" v-model="settings.theme.bgColor" class="w-8 h-8 bg-transparent border-none cursor-pointer">
+                                            <span class="text-[8px] opacity-40 font-mono">{{ settings.theme.bgColor }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -648,7 +641,7 @@
                                             </div>
                                             <p class="text-[9px] font-bold truncate text-center">{{ tp.name }}</p>
                                         </div>
-                                        <div v-for="(up, uIdx) in tempSettings.themePresets" :key="'user-'+uIdx" 
+                                        <div v-for="(up, uIdx) in settings.themePresets" :key="'user-'+uIdx" 
                                              class="flex-shrink-0 w-32 bg-white/80 p-2 rounded-xl border border-black/5 relative group transition-all mr-4">
                                             <div @click="loadThemePreset(up.config)" class="w-full h-10 rounded mb-2 relative overflow-hidden shadow-inner cursor-pointer" :style="{ backgroundColor: up.config.bgColor }">
                                                 <div class="preset-corner" :style="{ backgroundColor: up.config.textColor }"></div>
@@ -677,7 +670,7 @@
                                     <button @click="addCustomFont" class="px-2 py-1 rounded text-[10px] transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">添加</button>
                                 </div>
                                 <div class="space-y-2 max-h-32 overflow-y-auto pr-2 hide-scrollbar">
-                                    <div v-for="(cf, idx) in tempSettings.customFonts" :key="idx" class="flex justify-between items-center text-[9px] bg-black/5 p-2 rounded">
+                                    <div v-for="(cf, idx) in settings.customFonts" :key="idx" class="flex justify-between items-center text-[9px] bg-black/5 p-2 rounded">
                                         <span class="font-bold">{{ cf.name }}</span>
                                         <button @click="removeCustomFont(idx)" class="text-red-800 opacity-40"><i class="fa-solid fa-trash"></i></button>
                                     </div>
@@ -685,7 +678,6 @@
                             </div>
                         </section>
 
-                        <!-- 记忆管理 -->
                         <section class="bg-white/50 p-5 rounded-2xl border border-black/5">
                             <h4 class="font-bold text-xs mb-4 flex items-center gap-2"><i class="fa-solid fa-database"></i> 记忆管理</h4>
                             <div class="flex gap-2">
@@ -694,9 +686,10 @@
                                 <input type="file" ref="fileInput" class="hidden" @change="importData">
                             </div>
                         </section>
+                        <!-- 修改点：由于已经实时保存，这里改为“结束装修”并返回主页 -->
                         <div class="pt-4 pb-8">
-                            <button @click="saveSettings" class="w-full py-4 rounded-2xl font-bold shadow-2xl btn-active tracking-widest transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">
-                                <i class="fa-solid fa-box-archive mr-2"></i> 封存并应用配置模板
+                            <button @click="goHome" class="w-full py-4 rounded-2xl font-bold shadow-2xl btn-active tracking-widest transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">
+                                <i class="fa-solid fa-house mr-2"></i> 结束装修并返回
                             </button>
                         </div>
                     </div>
@@ -706,10 +699,8 @@
             <!-- 弹窗容器 -->
             <transition name="fade">
                 <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <!-- 弹窗主体 -->
                     <div ref="modalScrollContainer" class="bg-[#fefaf0] w-full max-w-md rounded-3xl paper-texture max-h-[90vh] overflow-y-auto shadow-2xl hide-scrollbar relative">
                         
-                        <!-- 顶栏容器 -->
                         <div :class="['z-50 px-6 paper-texture bg-[#fefaf0]', modal.type === 'viewTimelineDetail' ? 'sticky -mt-0 top-0 pt-6 pb-2' : 'pt-6 mb-6']">
                             <div class="flex justify-between items-center" :class="modal.type === 'viewTimelineDetail' ? 'mb-2' : ''">
                                 <h3 class="font-bold text-base tracking-widest">{{ modal.title }}</h3>
@@ -718,7 +709,6 @@
                                 </button>
                             </div>
 
-                            <!-- 详情模式吸顶栏 -->
                             <div v-if="modal.type === 'viewTimelineDetail' && !modal.isEditing" 
                                  class="flex justify-between items-start border-b border-black/10 pb-3 mt-4">
                                 <div class="flex-1 pr-4">
@@ -741,7 +731,6 @@
                             </div>
                         </div>
 
-                        <!-- 内容区 -->
                         <div class="px-6 pb-8">
                             <div v-if="modal.type === 'addCharacter' || modal.type === 'editCharacter'" class="space-y-4">
                                 <input v-model="form.char.name" placeholder="角色姓名" class="vintage-input w-full text-sm">
@@ -784,7 +773,7 @@
                             <div v-if="modal.type === 'viewTimelineDetail'">
                                 <div v-if="!modal.isEditing">
                                     <div v-if="modal.data.imgUrl" class="mb-5 rounded-2xl overflow-hidden shadow-lg border-4 border-white bg-black/5">
-                                        <img :src="modal.data.imgUrl" referrerpolicy="no-referrer" class="w-full h-auto max-h-72 object-cover" @error="handleImgError">
+                                        <img :src="modal.data.imgUrl" referrerpolicy="no-referrer" class="w-full h-auto block" @error="handleImgError">
                                     </div>
                                     <div class="letter-content leading-relaxed text-[13px] opacity-80 font-serif-sc" v-html="renderMarkdown(modal.data.fullDesc || modal.data.desc)"></div>
                                 </div>
@@ -815,7 +804,7 @@
 
                             <div v-if="modal.type === 'savePreset' || modal.type === 'saveThemePreset'" class="space-y-4">
                                 <input v-model="form.presetName" placeholder="预设方案名称" class="vintage-input w-full text-sm">
-                                <button @click="modal.type === 'savePreset' ? confirmSavePreset() : confirmSaveThemePreset()" class="w-full py-3 rounded-2xl font-bold btn-active transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">封存方案</button>
+                                <button @click="modal.type === 'savePreset' ? confirmSavePreset() : confirmSaveThemePreset()" class="w-full py-3 rounded-2xl font-bold btn-active transition-all" :style="{ backgroundColor: settings.theme.textColor, color: settings.theme.bgColor }">确认存入</button>
                             </div>
                         </div>
                     </div>
@@ -874,10 +863,10 @@
                     privacy: initialSettings.privacy || { enabled: false, pin: '' } 
                 });
 
-                const tempSettings = reactive({}); 
                 const fontInput = reactive({ name: '', url: '' });
                 const themeOptions = ['#f4ead5', '#e8e6e1', '#d8e2dc', '#fcd5ce', '#9eb5c4'];
 
+                // 核心监听：任何 settings 的变化都会立即同步到本地存储
                 watch([characters, letters, settings], () => { 
                     localStorage.setItem('lyhx_chars', JSON.stringify(characters.value)); 
                     localStorage.setItem('lyhx_letters', JSON.stringify(letters.value));
@@ -885,31 +874,39 @@
                 }, { deep: true });
 
                 const applyCustomFontsToPage = (fonts) => { const styleEl = document.getElementById('custom-fonts-style'); if (!styleEl) return; let css = ''; fonts.forEach(f => { css += `@font-face { font-family: "${f.name}"; src: url("${f.url}"); font-display: swap; }\n`; }); styleEl.innerHTML = css; };
-                const enterWorkshop = () => { Object.assign(tempSettings, JSON.parse(JSON.stringify(settings))); applyCustomFontsToPage(tempSettings.customFonts); currentPage.value = 'workshop'; };
-                const addCustomFont = () => { if (!fontInput.name || !fontInput.url) return; tempSettings.customFonts.push({ name: fontInput.name, url: fontInput.url }); applyCustomFontsToPage(tempSettings.customFonts); fontInput.name = ''; fontInput.url = ''; };
-                const removeCustomFont = (idx) => { tempSettings.customFonts.splice(idx, 1); applyCustomFontsToPage(tempSettings.customFonts); };
-                const saveSettings = () => { Object.assign(settings, JSON.parse(JSON.stringify(tempSettings))); applyCustomFontsToPage(settings.customFonts); alert('配置已封存并应用'); goHome(); };
+                const enterWorkshop = () => { applyCustomFontsToPage(settings.customFonts); currentPage.value = 'workshop'; };
                 
+                // 实时保存：添加字体后立即更新页面
+                const addCustomFont = () => { 
+                    if (!fontInput.name || !fontInput.url) return; 
+                    settings.customFonts.push({ name: fontInput.name, url: fontInput.url }); 
+                    applyCustomFontsToPage(settings.customFonts); 
+                    fontInput.name = ''; fontInput.url = ''; 
+                };
+
+                const removeCustomFont = (idx) => { settings.customFonts.splice(idx, 1); applyCustomFontsToPage(settings.customFonts); };
+                
+                // 实时保存：保存预设逻辑
                 const confirmSavePreset = () => { 
                     if(!form.presetName) return; 
-                    const existingIdx = tempSettings.stationeryPresets.findIndex(p => p.name === form.presetName);
-                    const presetData = { name: form.presetName, config: JSON.parse(JSON.stringify(tempSettings.stationery)) };
-                    if (existingIdx !== -1) tempSettings.stationeryPresets[existingIdx] = presetData;
-                    else tempSettings.stationeryPresets.push(presetData);
+                    const existingIdx = settings.stationeryPresets.findIndex(p => p.name === form.presetName);
+                    const presetData = { name: form.presetName, config: JSON.parse(JSON.stringify(settings.stationery)) };
+                    if (existingIdx !== -1) settings.stationeryPresets[existingIdx] = presetData;
+                    else settings.stationeryPresets.push(presetData);
                     form.presetName = ''; modal.show = false; 
                 };
 
                 const confirmSaveThemePreset = () => {
                     if(!form.presetName) return;
-                    const existingIdx = tempSettings.themePresets.findIndex(p => p.name === form.presetName);
-                    const presetData = { name: form.presetName, config: JSON.parse(JSON.stringify(tempSettings.theme)) };
-                    if (existingIdx !== -1) tempSettings.themePresets[existingIdx] = presetData;
-                    else tempSettings.themePresets.push(presetData);
+                    const existingIdx = settings.themePresets.findIndex(p => p.name === form.presetName);
+                    const presetData = { name: form.presetName, config: JSON.parse(JSON.stringify(settings.theme)) };
+                    if (existingIdx !== -1) settings.themePresets[existingIdx] = presetData;
+                    else settings.themePresets.push(presetData);
                     form.presetName = ''; modal.show = false;
                 };
 
-                const loadPreset = (preset) => { tempSettings.stationery = JSON.parse(JSON.stringify(preset.config)); };
-                const loadThemePreset = (tp) => { tempSettings.theme.bgColor = tp.bgColor; tempSettings.theme.textColor = tp.textColor; tempSettings.theme.globalFont = tp.font || tp.globalFont; };
+                const loadPreset = (preset) => { settings.stationery = JSON.parse(JSON.stringify(preset.config)); };
+                const loadThemePreset = (tp) => { settings.theme.bgColor = tp.bgColor; settings.theme.textColor = tp.textColor; settings.theme.globalFont = tp.font || tp.globalFont; };
                 
                 const openStationeryPicker = () => { modal.type = 'pickStationery'; modal.title = '自定义标签页信纸'; modal.show = true; };
 
@@ -972,8 +969,8 @@
                     window.scrollTo(0, 0);
                 };
 
-                const removePreset = (idx) => { tempSettings.stationeryPresets.splice(idx, 1); };
-                const removeThemePreset = (idx) => { tempSettings.themePresets.splice(idx, 1); };
+                const removePreset = (idx) => { settings.stationeryPresets.splice(idx, 1); };
+                const removeThemePreset = (idx) => { settings.themePresets.splice(idx, 1); };
                 const goHome = () => { currentPage.value = 'home'; if(bgmPlayer.value) { bgmPlayer.value.pause(); bgmPlayer.value.currentTime = 0; } isMusicPlaying.value = false; };
                 const calculateDays = (dateStr) => { if (!dateStr) return 0; try { const d = new Date(dateStr.replace(/[年|月]/g, '-').replace('日', '')); if (isNaN(d.getTime())) return 0; return Math.max(0, Math.floor((new Date() - d) / 86400000)); } catch(e) { return 0; } };
                 
@@ -1013,8 +1010,8 @@
                         form.timeline = rebuildTimelineBasics(parsedTimeline.value); 
                     }
                     else if (type === 'addTimelineEvent') { modal.title = '添笔新纪'; form.event = { category: '', date: '', title: '', desc: '', fullDesc: '', imgUrl: '' }; }
-                    else if (type === 'savePreset') { modal.title = '封存当前装潢至库'; }
-                    else if (type === 'saveThemePreset') { modal.title = '封存当前界面方案'; }
+                    else if (type === 'savePreset') { modal.title = '保存此装潢'; }
+                    else if (type === 'saveThemePreset') { modal.title = '保存此界面方案'; }
                 };
 
                 const saveCharacter = () => { 
@@ -1167,10 +1164,10 @@
                 const handleImgError = (e) => { if (e.target.src !== defaultAvatar) e.target.src = defaultAvatar; };
                 const toggleMusic = () => { if (!bgmPlayer.value) return; if (isMusicPlaying.value) bgmPlayer.value.pause(); else bgmPlayer.value.play().catch(() => { isMusicPlaying.value = false; }); isMusicPlaying.value = !isMusicPlaying.value; };
                 const exportLetterImage = () => { const area = document.getElementById('letter-canvas'); html2canvas(area, { useCORS: true, scale: 2 }).then(canvas => { const link = document.createElement('a'); link.download = `流年书信-${getCurrentLetter().title}.png`; link.href = canvas.toDataURL(); link.click(); }); };
-                const exportData = () => { const outSettings = currentPage.value === 'workshop' ? tempSettings : settings; const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: outSettings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
-                const importData = (e) => { const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); characters.value = data.characters || []; letters.value = data.letters || {}; Object.assign(settings, data.settings); if (currentPage.value === 'workshop') Object.assign(tempSettings, JSON.parse(JSON.stringify(data.settings))); applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); } catch (err) { alert('导入失败，请检查文件格式。'); } }; reader.readAsText(e.target.files[0]); };
+                const exportData = () => { const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: settings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
+                const importData = (e) => { const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); characters.value = data.characters || []; letters.value = data.letters || {}; Object.assign(settings, data.settings); applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); } catch (err) { alert('导入失败，请检查文件格式。'); } }; reader.readAsText(e.target.files[0]); };
 
-                const RingThemeClass = (color) => { const activeColor = currentPage.value === 'workshop' ? tempSettings.theme.bgColor : settings.theme.bgColor; return activeColor === color ? 'ring-2 ring-black/20 ring-offset-2' : ''; };
+                const RingThemeClass = (color) => settings.theme.bgColor === color ? 'ring-2 ring-black/20 ring-offset-2' : '';
                 const tabNameMap = { imprint: '旧影', sentiments: '寄思', echoes: '回响', chronicles: '纪年' };
                 
                 const getActiveLetterConfig = () => {
@@ -1184,9 +1181,9 @@
 
                 const getLetterStyle = computed(() => ({ backgroundImage: `url(${getActiveLetterConfig().bg})` }));
                 const getPaddingStyle = computed(() => ({ padding: `40px ${getActiveLetterConfig().pSide}px 40px ${getActiveLetterConfig().pSide}px` }));
-                const getLetterPreviewStyle = computed(() => ({ backgroundImage: `url(${tempSettings.stationery?.bg})` }));
-                const getPaddingPreviewStyle = computed(() => ({ padding: `40px ${tempSettings.stationery?.pSide}px 40px ${tempSettings.stationery?.pSide}px` }));
-                const getLetterFontPreviewStyle = computed(() => ({ fontSize: tempSettings.stationery?.fontSize + 'px', color: tempSettings.stationery?.textColor, fontFamily: tempSettings.stationery?.fontFamily }));
+                const getLetterPreviewStyle = computed(() => ({ backgroundImage: `url(${settings.stationery?.bg})` }));
+                const getPaddingPreviewStyle = computed(() => ({ padding: `40px ${settings.stationery?.pSide}px 40px ${settings.stationery?.pSide}px` }));
+                const getLetterFontPreviewStyle = computed(() => ({ fontSize: settings.stationery?.fontSize + 'px', color: settings.stationery?.textColor, fontFamily: settings.stationery?.fontFamily }));
 
                 const enterEditMode = async () => {
                     let ratio = 0;
@@ -1208,10 +1205,10 @@
                 onMounted(() => { applyCustomFontsToPage(settings.customFonts || []); });
 
                 return {
-                    currentPage, currentTab, characters, currentCharacter, settings, tempSettings, fontInput, themeOptions, themePresets,
+                    currentPage, currentTab, characters, currentCharacter, settings, fontInput, themeOptions, themePresets,
                     tabNameMap, modal, form, currentLetterIdx, defaultAvatar, workshopUi,
                     tabOrder, tabTransition, handleTouchStart, handleTouchEnd, handleTabClick,
-                    goHome, calculateDays, selectCharacter, openModal, saveCharacter, confirmDeleteCharacter, enterWorkshop, saveSettings,
+                    goHome, calculateDays, selectCharacter, openModal, saveCharacter, confirmDeleteCharacter, enterWorkshop,
                     addCustomFont, removeCustomFont, confirmSavePreset, confirmSaveThemePreset, loadPreset, loadThemePreset, removePreset, removeThemePreset,
                     getLetters, getCurrentLetter, saveLetter, saveTimeline, saveSingleEvent, viewTimelineDetail, saveSingleEventFromView, toggleImportant, deleteSingleEvent,
                     toggleMusic, exportLetterImage, exportData, importData, renderMarkdown, enterEditMode,
