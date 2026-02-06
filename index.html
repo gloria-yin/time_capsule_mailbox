@@ -356,7 +356,7 @@
 
             <transition :name="currentPage === 'detail' ? 'letter-reveal' : 'fade'" mode="out-in" 
                         enter-active-class="letter-reveal-animation">
-                <!-- 1. 缘起之遇 -->
+                <!-- 1. 缘起之遇 (修改：使用 sortedCharacters 按照日期倒序排列) -->
                 <div v-if="currentPage === 'home'" key="home" class="p-6">
                     <div class="flex justify-between items-center mb-10">
                         <h3 class="text-sm font-bold border-l-4 pl-3 tracking-widest opacity-70" :style="{ borderColor: settings.theme.textColor }">缘起之遇</h3>
@@ -366,13 +366,13 @@
                         </button>
                     </div>
                     
-                    <div v-if="characters.length === 0" class="py-32 text-center opacity-30">
+                    <div v-if="sortedCharacters.length === 0" class="py-32 text-center opacity-30">
                         <i class="fa-solid fa-wind text-3xl mb-4"></i>
                         <p class="text-sm">暂无缘分，待君落笔</p>
                     </div>
 
                     <div class="space-y-4">
-                        <div v-for="char in characters" :key="char.id" @click="selectCharacter(char)"
+                        <div v-for="char in sortedCharacters" :key="char.id" @click="selectCharacter(char)"
                              class="character-card rounded-sm group">
                             
                             <div class="postal-days-stamp group-hover:border-[#8b0000]/60 transition-colors">
@@ -548,7 +548,7 @@
                     </div>
                 </div>
 
-                <!-- 3. 时光工坊 (修改: 实时保存逻辑) -->
+                <!-- 3. 时光工坊 -->
                 <div v-else-if="currentPage === 'workshop'" key="workshop" class="p-6">
                     <div class="flex justify-between items-center mb-8">
                         <h3 class="text-lg font-bold border-l-4 border-[#4a3728] pl-3" :style="{ borderColor: settings.theme.textColor }">时光工坊</h3>
@@ -708,8 +708,10 @@
             <!-- 弹窗容器 -->
             <transition name="fade">
                 <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                    <!-- 弹窗主体 -->
                     <div ref="modalScrollContainer" class="bg-[#fefaf0] w-full max-w-md rounded-3xl paper-texture max-h-[90vh] overflow-y-auto shadow-2xl hide-scrollbar relative">
                         
+                        <!-- 顶栏容器 -->
                         <div :class="['z-50 px-6 paper-texture bg-[#fefaf0]', modal.type === 'viewTimelineDetail' ? 'sticky -mt-0 top-0 pt-6 pb-2' : 'pt-6 mb-6']">
                             <div class="flex justify-between items-center" :class="modal.type === 'viewTimelineDetail' ? 'mb-2' : ''">
                                 <h3 class="font-bold text-base tracking-widest">{{ modal.title }}</h3>
@@ -718,6 +720,7 @@
                                 </button>
                             </div>
 
+                            <!-- 详情模式吸顶栏 -->
                             <div v-if="modal.type === 'viewTimelineDetail' && !modal.isEditing" 
                                  class="flex justify-between items-start border-b border-black/10 pb-3 mt-4">
                                 <div class="flex-1 pr-4">
@@ -740,6 +743,7 @@
                             </div>
                         </div>
 
+                        <!-- 内容区 -->
                         <div class="px-6 pb-8">
                             <div v-if="modal.type === 'addCharacter' || modal.type === 'editCharacter'" class="space-y-4">
                                 <input v-model="form.char.name" placeholder="角色姓名" class="vintage-input w-full text-sm">
@@ -1167,10 +1171,17 @@
                     return result;
                 });
 
+                // 角色排序逻辑 (修改：计算属性 sortedCharacters)
+                const sortedCharacters = computed(() => {
+                    return [...characters.value].sort((a, b) => {
+                        return parseDateForSort(b.startDate) - parseDateForSort(a.startDate);
+                    });
+                });
+
                 const handleImgError = (e) => { if (e.target.src !== defaultAvatar) e.target.src = defaultAvatar; };
                 const toggleMusic = () => { if (!bgmPlayer.value) return; if (isMusicPlaying.value) bgmPlayer.value.pause(); else bgmPlayer.value.play().catch(() => { isMusicPlaying.value = false; }); isMusicPlaying.value = !isMusicPlaying.value; };
                 const exportLetterImage = () => { const area = document.getElementById('letter-canvas'); html2canvas(area, { useCORS: true, scale: 2 }).then(canvas => { const link = document.createElement('a'); link.download = `流年书信-${getCurrentLetter().title}.png`; link.href = canvas.toDataURL(); link.click(); }); };
-                const exportData = () => { const outSettings = currentPage.value === 'workshop' ? tempSettings : settings; const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: settings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
+                const exportData = () => { const blob = new Blob([JSON.stringify({ characters: characters.value, letters: letters.value, settings: settings })], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `流年备份_${new Date().getTime()}.json`; a.click(); };
                 const importData = (e) => { const reader = new FileReader(); reader.onload = (ev) => { try { const data = JSON.parse(ev.target.result); if (!data.settings) throw new Error(); characters.value = data.characters || []; letters.value = data.letters || {}; Object.assign(settings, data.settings); applyCustomFontsToPage(settings.customFonts || []); alert('记忆与配置已归位'); } catch (err) { alert('导入失败，请检查文件格式。'); } }; reader.readAsText(e.target.files[0]); };
 
                 const RingThemeClass = (color) => settings.theme.bgColor === color ? 'ring-2 ring-black/20 ring-offset-2' : '';
@@ -1218,7 +1229,7 @@
                     addCustomFont, removeCustomFont, confirmSavePreset, confirmSaveThemePreset, loadPreset, loadThemePreset, removePreset, removeThemePreset,
                     getLetters, getCurrentLetter, saveLetter, saveTimeline, saveSingleEvent, viewTimelineDetail, saveSingleEventFromView, toggleImportant, deleteSingleEvent,
                     toggleMusic, exportLetterImage, exportData, importData, renderMarkdown, enterEditMode,
-                    parsedTimeline, getLetterStyle, getPaddingStyle, getLetterPreviewStyle, getPaddingPreviewStyle, getLetterFontPreviewStyle, getActiveLetterConfig, RingThemeClass, handleImgError, isMusicPlaying, bgmPlayer,
+                    parsedTimeline, sortedCharacters, getLetterStyle, getPaddingStyle, getLetterPreviewStyle, getPaddingPreviewStyle, getLetterFontPreviewStyle, getActiveLetterConfig, RingThemeClass, handleImgError, isMusicPlaying, bgmPlayer,
                     openStationeryPicker, applyStationeryToChar, isStationeryActive,
                     modalScrollContainer, descTextArea
                 };
